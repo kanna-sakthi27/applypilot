@@ -1,0 +1,33 @@
+# --- Secrets and personal data — NEVER commit these ---
+.env
+.env.*
+!.env.example
+
+# Candidate answer bank and cross-channel registry (start from the .example templates)
+bank/core.md
+bank/OPEN-QUESTIONS.md
+applied-jobs-registry.md
+
+# Per-channel run logs (generated at runtime; contain your application history)
+**/run-log.md
+**/answers.md
+
+# CV / resumes
+cv/source/*.json
+!cv/source/default.example.json
+cv/**/*.pdf
+cv/**/*.docx
+linkedin-automation/cv/*
+!linkedin-automation/cv/.gitkeep
+
+# Runtime output
+logs/
+state/
+scratchpad/
+
+# Tooling / editor / OS
+.commandcode/
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store

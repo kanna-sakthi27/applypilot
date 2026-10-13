@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "profile": "default",
+  "_note": "Authoritative structured CV template. Copy to cv/source/default.json and fill in your real details. Tailoring may reorder, re-emphasise and reword, but every claim here is the ceiling — tools/claim_guard.py rejects any variant that adds an employer, date, certification, skill or figure not present in this file.",
+
+  "contact": {
+    "name": "<Full legal name>",
+    "headline": "<e.g. MBA, BSc (Computer Science)>",
+    "email": "<you@example.com>",
+    "phone": "<+country number>",
+    "location": "<city>, <state>, <country>",
+    "links": {
+      "linkedin": "linkedin.com/in/<your-handle>",
+      "github": "github.com/<your-handle>"
+    }
+  },
+
+  "summary": "<2-3 sentence professional summary; mention your strongest quantified achievement.>",
+
+  "skills": [
+    "<skill>", "<skill>", "<skill>"
+  ],
+
+  "neverClaim": [
+    "<skill you must never claim>", "<skill you must never claim>"
+  ],
+
+  "certifications": [
+    "<Certification name> (<year>)"
+  ],
+
+  "education": [
+    { "institution": "<institution>", "qualification": "<degree>", "year": "<start-end>" }
+  ],
+
+  "roles": [
+    {
+      "company": "<Company>",
+      "title": "<Job title>",
+      "location": "<city, country>",
+      "start": "<Mon YYYY>",
+      "end": "present",
+      "bullets": [
+        "<Quantified achievement bullet.>",
+        "<Quantified achievement bullet.>"
+      ]
+    }
+  ],
+
+  "projects": [
+    { "name": "<Project>", "url": "<github.com/you/project>" }
+  ]
+}
