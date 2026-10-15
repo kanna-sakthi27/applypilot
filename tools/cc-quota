@@ -14,7 +14,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const API = 'https://api.commandcode.ai';
+const API = process.env.PROVIDER_API_BASE || 'https://api.commandcode.ai';
 const PLAN_MONTHLY = {
   'individual-go': 10,
   'individual-goat': 70,

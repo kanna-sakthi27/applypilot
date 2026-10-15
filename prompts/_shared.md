@@ -94,24 +94,10 @@ TELEGRAM — the operator's chat (chat ${TELEGRAM_CHAT_ID}):
 CONCURRENCY: the launcher already holds an exclusive browser lock, so this run is the only one using
 Brave. Do not check for, or wait on, other jobs.
 
-SCOPE — infrastructure work, engineer AND technical-manager level. The job's core must be running,
-automating or leading infrastructure. Broadly:
-  · DevOps · SRE / Reliability · Platform · Release engineering
-  · Cloud — engineer, architect, lead, manager
-  · **Infrastructure** — Infrastructure Engineer, Senior Infrastructure Engineer, Infrastructure Lead,
-    Infrastructure Manager, Infrastructure Operations Lead/Manager, IT Infrastructure Lead
-    (cloud OR on-premises — do NOT require the word "cloud")
-  · **Linux / Unix / Systems** — Linux Engineer, Linux Systems Engineer, Senior Systems Engineer,
-    Linux Systems Administrator, Systems Engineer, Linux Lead, Systems Team Lead, Linux/Unix Engineer
-  · Manager level: DevOps / Cloud / Infrastructure / Platform / SRE / Linux / Systems Manager, Team
-    Lead, Engineering Manager (those teams), Head of DevOps/Cloud/Infrastructure/Platform
-  · A title that does not literally say "DevOps" still counts when the description is running Linux
-    servers, automation, CI/CD, cloud or monitoring.
-  Never: helpdesk / desktop / IT support / service desk · pure networking or NOC · pure DBA ·
-  security that is not DevSecOps · application/backend/frontend/mobile development · data / analytics /
-  ML / AI / DS · QA (unless it is CI/CD focused) · Oracle/SAP/HR systems · Microsoft 365 workplace ·
-  sales / recruiting / non-technical management · junior / graduate / intern / "associate I".
-  Ambiguous title -> the core responsibility must be infrastructure, else SKIP + log.
+SCOPE — the role family this run hunts is defined in the **PROFILE block near the end of this prompt**
+(generated from `config/profile.conf`). That block is binding: follow its SCOPE and SEARCH TITLES
+exactly and treat its "Never" list as hard exclusions. If no PROFILE block is present, fall back to
+`config/scope.conf` + `bank/core.md`.
 
 JUDGE TITLES FIRST — this is where most of a run's budget is thrown away. Decide from the TITLE in the
 results list, BEFORE opening anything. Only open a card whose title is in scope above. Never open a
@@ -143,14 +129,8 @@ so the screen is where a run earns its time.
   "wrong role": `out of scope` · `right-to-work` · `language` · `contract` · `pay` · `closed` ·
   `external` · `duplicate` · `captcha` / `login wall`.
 
-SEARCH TITLES — rotate through these and keep going until the day cap or the supply is genuinely dry:
-  DevOps Engineer · Senior DevOps Engineer · DevOps Lead · DevOps Manager · Cloud Engineer ·
-  Cloud Architect · Cloud Lead · Platform Engineer · Platform Lead · Site Reliability Engineer ·
-  SRE Lead · SRE Manager · Infrastructure Engineer · Senior Infrastructure Engineer · Infrastructure
-  Lead · Infrastructure Manager · Infrastructure Operations Manager · IT Infrastructure Lead ·
-  Linux Engineer · Linux Systems Engineer · Senior Systems Engineer · Linux Systems Administrator ·
-  Linux Lead · Systems Engineer · Systems Team Lead · DevSecOps Engineer · Release Engineer ·
-  Head of Infrastructure · Head of Platform
+SEARCH TITLES — rotate through the titles in the **PROFILE block** at the end of this prompt and keep
+going until the day cap or the supply is genuinely dry.
 
 ANSWERS — take EVERY form answer from `bank/core.md`. Never invent a number or a status.
   The two fields runs most often get wrong, so double-check them:

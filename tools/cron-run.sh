@@ -52,6 +52,19 @@ load_env_defaults "$ROOT/.env"
 : "${USAGE_STATS_CMD:=$ROOT/tools/run-stats.sh}"
 : "${QUOTA_CMD:=$ROOT/tools/cc-quota}"
 
+# The spend gate is OPTIONAL: with no gate configured (e.g. a non-Command-Code provider) paid models
+# are allowed — an absent gate must never silently block every paid attempt.
+quota_ok() {
+  [ -n "${QUOTA_CMD:-}" ] || return 0
+  [ -e "$QUOTA_CMD" ] || return 0
+  "$QUOTA_CMD" --gate >/dev/null 2>&1
+}
+
+# --- role profile: the job family this engine hunts (config/profile.conf) --------------------
+# Injected into every run's prompt below as a PROFILE block, so the scope + search titles live in
+# ONE file instead of being hardcoded in prompts/_shared.md.
+[ -f "$ROOT/config/profile.conf" ] && . "$ROOT/config/profile.conf"
+
 CH=""
 DRY_RUN=0
 MODE="${JOB_APPLY_MODE:-auto}"
@@ -127,7 +140,7 @@ export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
 export HOME="${HOME:?HOME is not set}"
 
 SLUG="$(printf '%s' "$ROOT" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/^-\+//; s/-\+$//')"
-PROJ="$HOME/.commandcode/projects/$SLUG"
+PROJ="${USAGE_PROJECTS_DIR:-$HOME/.commandcode/projects}/$SLUG"
 
 # --- model health ---------------------------------------------------------------
 # A model that hit its daily cap, got rate-limited, or twice failed to finish inside the attempt
@@ -440,6 +453,22 @@ esac
 PROMPT="$(cat "$ROOT/prompts/_shared.md" "$PREFLIGHT_FILE" "$ROOT/prompts/$CH.md" \
           ${MODE_PART:+"$MODE_PART"})"
 
+# ROLE PROFILE — the configured scope + search titles, appended so the channel body cannot drift from
+# config/profile.conf. The bank (bank/core.md) still owns every individual ANSWER.
+if [ -n "${PROFILE_SCOPE:-}" ]; then
+  PROMPT="${PROMPT}
+
+## PROFILE — the role this run hunts (generated from config/profile.conf)
+
+SCOPE — the job family this run applies to:
+${PROFILE_SCOPE}
+  Never: ${PROFILE_NEVER}
+  Ambiguous title -> the core responsibility must be in scope above, else SKIP + log.
+
+SEARCH TITLES — rotate through these and keep going until the day cap or the supply is genuinely dry:
+  ${PROFILE_SEARCH_TITLES}"
+fi
+
 # Parameters the browser-extension UI set for this run, rendered as a trailing override block so
 # they win over the channel body above. Absent for a normal cron run.
 if [ -n "${JOB_APPLY_PROMPT_EXTRA:-}" ] && [ -f "${JOB_APPLY_PROMPT_EXTRA}" ]; then
@@ -532,7 +561,7 @@ is_free_model() { case "$1" in *:free|*-free) return 0 ;; *) return 1 ;; esac; }
 if [ "$DRY_RUN" = 1 ]; then
   echo "--- dry run: $CH ---"
   echo "prompt bytes : $(printf '%s' "$PROMPT" | wc -c)  (was ~110 KB when it read the bank + ruleset)"
-  echo "prompt parts : shared+preflight+channel${MODE_PART:+ +mode_contract}${JOB_APPLY_PROMPT_EXTRA:+ +ui_overrides}"
+  echo "prompt parts : shared+preflight+channel${PROFILE_SCOPE:+ +profile}${MODE_PART:+ +mode_contract}${JOB_APPLY_PROMPT_EXTRA:+ +ui_overrides}"
   echo "run dir      : ${RUN_DIR:-<none>}"
   echo "models       : $MODELS"
   echo "caps         : first=${FIRST_MODEL_CAP}s others=${PER_MODEL}s total=${TIMEOUT}s turns=${MAXTURNS}"
@@ -596,7 +625,7 @@ while [ "$i" -lt "${#ARR[@]}" ]; do
   case "$m" in
     *:free|*-free) : ;;
     *)
-      if ! "$QUOTA_CMD" --gate >/dev/null 2>&1; then
+      if ! quota_ok; then
         say "quota gate BLOCKED paid model $m — skipping it for the free fallbacks"
         continue
       fi
@@ -784,7 +813,7 @@ done
 if [ "$WORKED" -eq 0 ]; then
   fp="$(first_paid)"
   if [ -n "$fp" ] && [ $(( $(date +%s) - START )) -lt $(( TIMEOUT - 120 )) ]; then
-    if ! "$QUOTA_CMD" --gate >/dev/null 2>&1; then
+    if ! quota_ok; then
       say "final paid fallback skipped — quota gate blocks paid spending"
     else
       att=$(( TIMEOUT - ( $(date +%s) - START ) )); [ "$att" -gt "$PER_MODEL" ] && att="$PER_MODEL"

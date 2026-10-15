@@ -11,7 +11,7 @@ echo
 echo "  runner    Command Code CLI  →  cmd -p \"<channel prompt>\" --yolo --skip-onboarding --no-auto-update"
 echo "  models    ${APPLY_MODELS:-<unset>}"
 echo "            (free models primary; deepseek paid fallback only while the quota gate allows)"
-echo "  browser   agent-browser → Brave CDP 127.0.0.1:${BRAVE_CDP_PORT:-9222}"
+echo "  browser   agent-browser → ${BROWSER_NAME:-Brave} CDP 127.0.0.1:${BROWSER_CDP_PORT:-${BRAVE_CDP_PORT:-9222}}"
 echo "  reports   Telegram chat ${TELEGRAM_CHAT_ID:-<unset>}"
 echo "  schedule  your crontab  (edit with: crontab -e)"
 echo "  prompts   $ROOT/prompts/<channel>.md"

@@ -205,28 +205,37 @@ cmd_bank() {
 }
 
 # ------------------------------------------------------------------ cron
-cron_block() {
-  printf '# jobapply.sh — managed schedule\n'
-  local i=0 n m
+cron_block() { # every_hours [stagger_minutes]
+  local every="${1:-2}" stagger="${2:-12}" i=0 n m slots
+  slots=$(( 60 / stagger )); [ "$slots" -lt 1 ] && slots=1
+  printf '# jobapply.sh — managed schedule (every %sh, staggered %sm)\n' "$every" "$stagger"
   for n in $(channel_names); do
-    if [ "$i" -lt 5 ]; then m=$(( i * 12 )); else m=$(( (i - 5) * 12 + 6 )); fi
-    printf '%d */2 * * * %s/tools/cron-run.sh %s >> %s/logs/cron.log 2>&1\n' "$m" "$ROOT" "$n" "$ROOT"
+    m=$(( (i % slots) * stagger + (i / slots) ))
+    printf '%d */%d * * * %s/tools/cron-run.sh %s >> %s/logs/cron.log 2>&1\n' "$m" "$every" "$ROOT" "$n" "$ROOT"
     i=$(( i + 1 ))
   done
   printf '# end jobapply\n'
 }
 cmd_cron() {
-  local sub="${1:-}"
+  local sub="" every=2 stagger=12
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      install|remove|show) sub="$1" ;;
+      --every)   every="${2:-2}";  shift ;;
+      --stagger) stagger="${2:-12}"; shift ;;
+    esac
+    shift
+  done
   have crontab || { bad "no crontab on this system"; return 1; }
   case "$sub" in
     install)
-      { crontab -l 2>/dev/null | sed '/# jobapply.sh — managed schedule/,/^# end jobapply/d'; cron_block; } | crontab -
-      ok "installed the schedule ($(channel_names | wc -l | tr -d ' ') channels, every 2h)" ;;
+      { crontab -l 2>/dev/null | sed '/# jobapply.sh — managed schedule/,/^# end jobapply/d'; cron_block "$every" "$stagger"; } | crontab -
+      ok "installed the schedule ($(channel_names | wc -l | tr -d ' ') channels, every ${every}h, staggered ${stagger}m)" ;;
     remove)
       crontab -l 2>/dev/null | sed '/# jobapply.sh — managed schedule/,/^# end jobapply/d' | crontab -
       ok "removed the managed schedule" ;;
     show) crontab -l 2>/dev/null | sed -n '/# jobapply.sh — managed schedule/,/^# end jobapply/p' ;;
-    *) bad "cron <install|remove|show>"; return 2 ;;
+    *) bad "cron <install|remove|show> [--every H] [--stagger M]"; return 2 ;;
   esac
 }
 
