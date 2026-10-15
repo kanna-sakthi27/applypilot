@@ -5,7 +5,7 @@ You are the Indeed DevOps auto-apply run for the candidate. Apply via **"Apply w
 ## Search
 Open a new tab (`agent-browser tab new`, then `agent-browser open <url>`):
 `https://<host>/jobs?q=<urlencoded keyword>&l=<location>&from=searchOnHP&sort=date`
-Hosts per market: ca.indeed.com (logged-in default), www.indeed.com, uk.indeed.com, au.indeed.com,
+Hosts per market: ca.indeed.com (logged-in default), uk.indeed.com, au.indeed.com,
 ie.indeed.com, nz.indeed.com, sg.indeed.com, ch.indeed.com.
 MARKET ROTATION — switch when a market is dry or external-only, never quit:
 uk → ie → fi → de/nl (EU postings must be in ENGLISH; skip roles needing Finnish/German/Dutch/French)
@@ -25,18 +25,18 @@ form there. **Step order varies by employer — handle whichever module the URL 
 review-module.**
 
 - **resume-selection-module**: ensure the radio `input[name=resume-selection]` for
-  "ALEX EXAMPLE - CV.pdf" is checked (click the input). Continue.
-- **contact-info-module**: first/last/email/phone usually prefilled (phone like <PHONE>, Malaysia
-  +60). Fill only what is empty (phone blank → `<PHONE_NATIONAL>`). Continue.
-- **profile-location**: Country=Malaysia; postal-code `<POSTCODE>`; locality `<CITY>`; street
-  `<CITY>, <STATE>` if empty. Continue.
-- **questions-module / questions/N**: if it shows phone/country fields (older flow): type `Malaysia`
-  into the country combobox search, click the `[role=option]` "Malaysia (+60)"; rewrite phone
-  `<PHONE_E164>` → `<PHONE_NATIONAL>`. Continue. Otherwise it is a screener page:
+  CV.pdf is checked (click the input). Continue.
+- **contact-info-module**: first/last/email/phone usually prefilled (phone like 000-000-0000, Malaysia
+  +60). Fill only what is empty (phone blank → `0000000000`). Continue.
+- **profile-location**: Country=<YOUR COUNTRY>; <YOUR POSTAL CODE>; locality '<YOUR CITY>'; street
+  `City, State` if empty. Continue.
+- **questions-module / questions/N**: if it shows phone/country fields (older flow): type `<YOUR COUNTRY>`
+  into the country combobox search, click the `[role=option]` "<YOUR COUNTRY> (+<COUNTRY CODE>)"; rewrite phone
+  `10000000000` → `0000000000`. Continue. Otherwise it is a screener page:
   map each fieldset legend by keyword and click the matching radio/checkbox INPUT:
   previously employed→No · preferred language→English · legally eligible/authorized in [country]→No
-  except Sri Lanka→Yes · sponsorship→Yes except Sri Lanka→No · background check→Yes · convicted→No ·
-  related/referral→No · accommodation→No · languages→"English - fluent (professional); Tamil - native"
+  except your home country→Yes · sponsorship→Yes except your home country→No · background check→Yes · convicted→No ·
+  related/referral→No · accommodation→No · languages→"English - fluent; <SECOND LANGUAGE> - native"
   · how did you learn→"Indeed" · passport→Yes · notice→30 days · tool experience→Yes only for core.md
   §5 claimable tools. Salary: Annually + the core.md §3 annual conversion + currency combobox (search
   e.g. "Canada", click "Canada Dollar (CAD)"). EEO groups → "Do not wish to answer". "Anything else"
@@ -44,7 +44,7 @@ review-module.**
   required radio group answered, no `aria-invalid`. Unmappable REQUIRED question → skip + close the tab
   + log (or ask the candidate if it is not a wall — see the shared preamble).
 - **Attestation** (`questions/N` with "Attestations"): check the e-sign checkbox INPUT ("Yes, I agree to
-  sign electronically" — the box, not the label), type `Alex Example` into the full-name
+  sign electronically" — the box, not the label), type `the candidate` into the full-name
   input, AI radio per core.md §6 (opt-out question → No = allow AI; plain consent → Yes). Continue.
 - **If any Continue/Submit is disabled/grey with the reCAPTCHA footer note**: reload the smartapply tab
   ONCE (`eval location.reload()`, accept the beforeunload dialog), re-walk from wherever it lands

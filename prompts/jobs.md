@@ -8,7 +8,7 @@ apply.
 
 - **the candidate must be logged in to jobs.ch.** Easy apply is built for registered users: the form is
   pre-filled and the CV is already attached (JobCloud). If jobs.ch shows a Login/register page,
-  report "needs the candidate to sign in to jobs.ch" and stop — never create an account, never submit a login
+  report "needs the operator to sign in to jobs.ch" and stop — never create an account, never submit a login
   form, never click Log out / Switch account.
 - **Search URL** (English UI):
   `https://www.jobs.ch/en/vacancies/?term=<urlencoded keyword>&page=<n>`
@@ -20,7 +20,7 @@ apply.
 - **Detail page**: `https://www.jobs.ch/en/vacancies/detail/<uuid>/`. When submittable it shows
   **"Easy apply"** near the top. The page also lists the **language requirement** (e.g.
   "German (Fluent), English (Intermediate)").
-- **Language gate**: the candidate's languages are **English (fluent) + Tamil (native) only** (core.md §6).
+- **Language gate**: the candidate's languages are **<LANGUAGES>** (core.md §6).
   SKIP any posting that requires German, French or Italian beyond beginner — most of the Swiss market
   is German-first, so a high skip rate here is normal and by design.
 - **Pay is CHF.** Apply-floor **CHF 5,700/mo** (core.md §3); expected **CHF 6,500/mo (77,800/yr)**.
@@ -29,7 +29,7 @@ apply.
 - **Easy apply form (JobCloud, verified 2026-10-10)**: the standard fields only — **name, email, phone
   and the CV**; **no custom screening questions**. For a logged-in user these are pre-filled. So the
   job is: verify/complete the standard fields from `bank/core.md` §1, make sure the CV
-  (`linkedin-automation/cv/CV_latest.pdf`) is attached, submit, and read the confirmation.
+  (`linkedin-automation/cv/CV.pdf`) is attached, submit, and read the confirmation.
   The exact DOM/module names of the form are learned on the **first supervised run** and recorded in
   `jobs-automation/RULESET.md` §5.
 
@@ -57,7 +57,7 @@ canton/city, not country:
 3. Click **Easy apply**. If there is no Easy apply control (external / company-site apply) → SKIP + log
    ("external"). If jobs.ch shows "already applied" → SKIP + log ("duplicate").
 4. Complete the form: name / email / phone from `bank/core.md` §1; the CV must be the canonical
-   `CV_latest.pdf`; answer any screener from `bank/core.md` — **never invent a value**. A
+   `CV.pdf`; answer any screener from `bank/core.md` — **never invent a value**. A
    REQUIRED question that is not answerable from core.md is **not** a wall: Telegram the candidate (job,
    exact question and options), log it in `jobs-automation/run-log.md` §5, close the tab, continue.
 5. Submit. **Count as applied ONLY on the visible confirmation** ("Application sent" / "Your

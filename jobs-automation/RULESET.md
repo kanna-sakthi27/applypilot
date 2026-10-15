@@ -1,3 +1,11 @@
+> Deep-dive notes for this channel: site mechanics and hard-won history. The runbook that
+> actually executes is `prompts/<channel>.md` + `prompts/_shared.md`, and **every form answer
+> comes from `bank/core.md`** — where this file and the bank disagree, the bank wins.
+>
+> Some notes here come from earlier incarnations of this system: anything mentioning
+> `browser action=…` or selecting a browser *profile* refers to a driver API that no longer
+> exists. The runbook drives the browser with the `agent-browser` CLI.
+
 # jobs.ch Auto-Apply — Ruleset (v1, 2026-10-10)
 
 Operating rules for the scheduled **jobs** channel for the candidate (Alex Example). Each run
@@ -27,7 +35,7 @@ French-speaking Switzerland and jobscout24.ch). Its own in-platform application 
   So the session that matters *is* the candidate's jobs.ch login. A run must not attempt to log in.
 - Postings **with the "Easy apply" badge** are submittable here; postings **without it** are
   external/company-site applies → SKIP + log.
-- **Swiss market = German/French/Italian first.** the candidate speaks **English + Tamil only** (core.md §6),
+- **Swiss market = German/French/Italian first.** the candidate speaks **only the languages in `bank/core.md`** (core.md §6),
   so German/French/Italian-required postings are a hard skip. Expect a high skip rate by design.
 - **Pay is CHF** (`core.md` §3): apply-floor **CHF 5,700/mo**, expected **CHF 6,500/mo**.
 
@@ -53,14 +61,14 @@ DS · QA (unless CI/CD-focused) · Oracle/SAP/HR systems · Microsoft 365 workpl
 responsibility must be infrastructure, else SKIP + log.
 
 **Swiss-specific skip list:** a **German / French / Italian** language requirement beyond beginner
-(English + Tamil only) · an *explicit* posted band below the **CHF floor (5,700/mo)** ·
+(only the languages in `bank/core.md`) · an *explicit* posted band below the **CHF floor (5,700/mo)** ·
 **hourly / day-rate / sub-12-month** postings (regardless of rate) · external postings (no Easy apply
 badge) · roles demanding existing Swiss/EU work authorization or citizenship.
 
 ## 3. Guardrails (never cross)
 
 1. **Never invent facts.** Every answer comes from `bank/core.md`. `core.md` wins on any conflict.
-2. **Visa is answered truthfully and the application is SUBMITTED.** Outside Sri Lanka: sponsorship
+2. **Visa is answered truthfully and the application is SUBMITTED.** Outside your home country: sponsorship
    **Yes**, authorized to work **No**. Do not self-skip because the ad omits sponsorship — let the
    employer decide. Skip only an explicit wall (no sponsorship offered, citizens/PR only, must already
    hold work authorization).
@@ -70,7 +78,7 @@ badge) · roles demanding existing Swiss/EU work authorization or citizenship.
 4. **A missing skill is not automatically a wall** — see `core.md` §5. Apply when the tool is one line
    in a broader stack; answer its experience question truthfully; never tick it as held.
 5. **Never bulk-apply.** One job at a time, 1.5–3 s between steps, verify state after each action.
-6. **Never answer salary below USD 8,000/mo expected / the CHF 5,700/mo floor** (CHF values in
+6. **Never answer salary below USD <EXPECTED_MONTHLY_USD>/mo expected / the CHF 5,700/mo floor** (CHF values in
    `core.md` §3). Never state a nationality other than **<NATIONALITY>**.
 7. **Daily cap 30** submitted per day for this channel (counted from this channel's §6, MYT);
    **per-run target 15** (inherited from the shared preamble). Never exceed the cap.
@@ -118,7 +126,7 @@ an optional `location=` narrows to a canton/city. Locations rotate:
 ## 6. Browser discipline
 
 - `agent-browser connect 9222` first, always — otherwise agent-browser drives its own bundled Chrome
-  with none of the candidate's logins and every site looks signed out. (The launcher's preflight already fails
+  with none of your logins and every site looks signed out. (The launcher's preflight already fails
   the run in that case; do not "work around" it.)
 - Prefer one compact `eval` returning JSON over a full `snapshot -i`; snapshots of results pages cost
   thousands of tokens.

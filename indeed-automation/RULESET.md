@@ -1,6 +1,14 @@
+> Deep-dive notes for this channel: site mechanics and hard-won history. The runbook that
+> actually executes is `prompts/<channel>.md` + `prompts/_shared.md`, and **every form answer
+> comes from `bank/core.md`** — where this file and the bank disagree, the bank wins.
+>
+> Some notes here come from earlier incarnations of this system: anything mentioning
+> `browser action=…` or selecting a browser *profile* refers to a driver API that no longer
+> exists. The runbook drives the browser with the `agent-browser` CLI.
+
 ## candidate OVERRIDES 2026-09-07 (apply to every run)
 1. HIT 30/DAY PER CHANNEL: daily target is 30 submitted applications per channel. Do NOT stop early while in-scope supply remains. Per-run attempt cap 15 (LinkedIn: 30). Keep rotating keywords/markets (US/UK/IE/EU-English/CA/SG/AU/remote) until 30/day is reached or the fresh pool is genuinely exhausted; then log a RUN SUMMARY with counts.
-2. UNANSWERED QUESTION -> ASK, DON'T SKIP: if a required screening question has no answer in the bank, do NOT abandon/skip it silently. Send the candidate a Telegram message via conversations_send to <TELEGRAM_CONV_ID> (user <TELEGRAM_CHAT_ID>): job title @ company, the EXACT question text and options, note the application is paused on her answer, log it in the run-log section 5, then CONTINUE with other jobs. If she answers before the run ends, come back and complete it.
+2. UNANSWERED QUESTION -> ASK, DON'T SKIP: if a required screening question has no answer in the bank, do NOT abandon/skip it silently. Send the operator a Telegram message via `tools/tg-notify.sh`: job title @ company, the EXACT question text and options, note the application is paused on the candidate's answer, log it in the run-log section 5, then CONTINUE with other jobs. If the candidate answers before the run ends, come back and complete it.
 
 # Indeed Auto-Apply Automation — Ruleset
 
@@ -37,23 +45,23 @@ Last updated: 2026-09-07 (rev 1 — built from live reconnaissance of the ca.ind
 
 Find Senior/Lead/**Manager** DevOps / Cloud / Platform / SRE roles — incl. DevOps Manager, Cloud Manager, Infrastructure Manager, Linux Team Lead, SRE/Platform Manager, Eng Manager (cloud/infra) (DevOps and cloud ONLY — §Scope) and apply via
 **"Apply with Indeed"** (smartapply) in the candidate's Brave. **Daily budget: 30 applications max/day**
-(the candidate 2026-09-07), per-run max 10 (rate-limit safety), across 1–3 runs/day. Report after each run.
+(candidate policy 2026-09-07), per-run max 10 (rate-limit safety), across 1–3 runs/day. Report after each run.
 
 ## 2. Hard guardrails (never cross)
 
 1. **Never invent facts.** Answers only from `bank/core.md`. Unknown required question (salary, visa,
    notice, start date, criminal/security clearance not mappable) → skip + log §5/§6.
 2. **No money/visa guesswork.** Salary/current-comp/notice/start-date: only from bank/core.md §2–§3
-   (currency conversions). Sponsorship: answer truthfully (Yes needs sponsorship outside SL/IN; No for
-   SL/IN). **Submit anyway** — do NOT self-skip on unclear sponsorship (the candidate: "visa required… use your
+   (currency conversions). Sponsorship: answer truthfully (Yes needs sponsorship outside the authorised countries; No for
+   the authorised countries). **Submit anyway** — do NOT self-skip on unclear sponsorship (the candidate: "visa required… use your
    brain"). Only skip when the posting/form explicitly requires existing right-to-work/citizenship
    ("must be eligible to work in Canada", "Canadian citizens/PR only", "no sponsorship offered").
-3. **Title filter (EXPANDED by the candidate 2026-09-07).** Senior/Lead/Staff/Principal/**Manager/Team Lead/Head** + DevOps/SRE/Platform/Infrastructure/Reliability/
+3. **Title filter (EXPANDED by candidate policy 2026-09-07).** Senior/Lead/Staff/Principal/**Manager/Team Lead/Head** + DevOps/SRE/Platform/Infrastructure/Reliability/
    Cloud/Linux — INCLUDING DevOps Manager, Cloud Manager, Infrastructure Manager, Linux Team Lead, SRE/Platform Manager, DevOps Team Lead, Eng Manager (cloud/infra). No junior/mid-only titles. No contracts unless clearly senior/manager+ and no hourly-rate floor
-   violation (below the USD 7,000/mo apply-floor → skip; floor lowered by the candidate 2026-09-07).
+   violation (below the USD <FLOOR_MONTHLY_USD>/mo apply-floor → skip; set in bank/core.md).
 3a. **Scope filter.** DevOps/cloud ONLY (see §Scope). Judge ambiguous titles by description.
-4. **Daily cap 30 on Indeed (the candidate 2026-09-07; LinkedIn and foreign-direct keep their own separate 30/day budgets).** Before EACH submission, count applied rows dated today (Asia/Kuala_Lumpur) in indeed-automation/run-log.md §6 (Indeed's own log); STOP once 30. Per run ≤10.
-4a. **Hard blockers → SKIP and CONTINUE (the candidate 2026-09-07):** unanswerable required question, ATS/form bug, captcha/recaptcha wall on a JOB → skip that job, log it in run-log.md §6, and keep applying. Never stop a run or park a needs-review draft on one hard blocker. Only stop at run cap (10), day cap (30), or an exhausted fresh list.
+4. **Daily cap 30 on Indeed (candidate policy 2026-09-07; LinkedIn and foreign-direct keep their own separate 30/day budgets).** Before EACH submission, count applied rows dated today (Asia/Kuala_Lumpur) in indeed-automation/run-log.md §6 (Indeed's own log); STOP once 30. Per run ≤10.
+4a. **Hard blockers → SKIP and CONTINUE (candidate policy 2026-09-07):** unanswerable required question, ATS/form bug, captcha/recaptcha wall on a JOB → skip that job, log it in run-log.md §6, and keep applying. Never stop a run or park a needs-review draft on one hard blocker. Only stop at run cap (10), day cap (30), or an exhausted fresh list.
 5. **Never submit with an unanswered required question.** If a required field/radio/checkbox is
    unanswered and not mappable → skip + log.
 6. **Never bulk-apply.** One job at a time; wait for each step to settle (1.5–3 s after clicks).
@@ -74,7 +82,7 @@ Find Senior/Lead/**Manager** DevOps / Cloud / Platform / SRE roles — incl. Dev
   (location blank = country-wide; `sort=date` = newest first). Hosts: ca.indeed.com,
   www.indeed.com (US), uk.indeed.com, au.indeed.com, ie.indeed.com, sg.indeed.com, fi.indeed.com,
   de.indeed.com, nl.indeed.com, ch.indeed.com (Switzerland).
-  MARKET ROTATION (the candidate 2026-09-07): prefer uk.indeed.com → ie.indeed.com → fi.indeed.com →
+  MARKET ROTATION (candidate policy 2026-09-07): prefer uk.indeed.com → ie.indeed.com → fi.indeed.com →
   de/nl.indeed.com (EU postings MUST be English — the candidate only speaks English; skip roles needing
   Finnish/German/Dutch/French) → ch.indeed.com (Switzerland — skip German/French/Italian-required
   roles; pay is CHF, floor CHF 5,700/mo) → ca.indeed.com → sg.indeed.com → au.indeed.com. When a
@@ -86,7 +94,7 @@ Find Senior/Lead/**Manager** DevOps / Cloud / Platform / SRE roles — incl. Dev
   `Linux Team Lead`, `Platform Engineer`, `Platform Manager`, `Site Reliability Engineer`,
   `SRE Manager`, `AWS DevOps Engineer`, `DevSecOps`. If a market yields mostly external "Apply on
   company site" results, switch keyword or market — do not burn the run on external-only lists.
-- PUSH TO SUBMIT (the candidate 2026-09-07): she wants SUCCESSFUL SUBMISSIONS. For every in-scope job with
+- PUSH TO SUBMIT (candidate policy 2026-09-07): the goal is SUCCESSFUL SUBMISSIONS. For every in-scope job with
   "Apply with Indeed", drive smartapply through every module to review → Submit (answers truthfully
   per bank/core.md; eligibility No + seeking sponsorship is fine). Abandon (skip+log) only on a true
   wall: unanswerable required question, captcha, or external-only.
@@ -123,17 +131,17 @@ Find Senior/Lead/**Manager** DevOps / Cloud / Platform / SRE roles — incl. Dev
       (`input[name=resume-selection]`) for "ALEX EXAMPLE - CV.pdf" is checked (click its
       input box center if not). Click **Continue**.
    b. **contact-info-module**: first/last name + email usually prefilled (ALEX EXAMPLE /
-      candidate@example.com); phone often prefilled with country Malaysia (+60) and number like
+      candidate@example.com); phone often prefilled with country <YOUR COUNTRY> (+<COUNTRY CODE>) and number like
       `<PHONE>` (or blank → set `<PHONE_NATIONAL>`; if the country combobox shows "Select an option",
       set Malaysia like the older questions/1 flow). Fill only what is empty. Click **Continue**.
-   b2. **profile-location**: Country = Malaysia (profile). Fill postal code `<POSTCODE>`, city/locality
+   b2. **profile-location**: Country = <YOUR COUNTRY> (profile). Fill postal code `<POSTCODE>`, city/locality
       `<CITY>`, street `<CITY>, <STATE>` (bank/core.md §1) if empty. Click **Continue**.
    c. **questions-module/questions/N** (contact phone page OR screener pages, several possible):
-      - If it shows the phone/country fields (older flow): country combobox → Malaysia (+60) via its
+      - If it shows the phone/country fields (older flow): country combobox → <YOUR COUNTRY> (+<COUNTRY CODE>) via its
         search input; phone prefilled `<PHONE_E164>` → rewrite to `<PHONE_NATIONAL>`; Continue.
       - Else it is a screener page: for EACH `fieldset` map its `legend` text → bank/core.md §2 keyword
         table → click the matching radio/checkbox INPUT. Text fields: fill only if required/mappable
-        (languages → "English — fluent (professional); Tamil — native", "how did you learn" →
+        (languages → "<LANGUAGES>", "how did you learn" →
         "Indeed"). Salary: Annually + amount (annual conversion §3) + currency combobox (search
         country, click option). **Audit before Continue**: every radio group in a required fieldset
         has a checked radio; no `[aria-invalid=true]`/`[class*=error]`. Unmappable required → SKIP job
@@ -173,7 +181,7 @@ Find Senior/Lead/**Manager** DevOps / Cloud / Platform / SRE roles — incl. Dev
   each step is identified by its URL module (`contact-info-module`, `profile-location`,
   `resume-selection-module`, `questions-module/questions/N`, `review-module`) and % progress; handle
   whichever appears next. Keep clicking Continue until review-module appears.
-- **profile-location step** (when present): Country already = Malaysia (profile); fill postal code
+- **profile-location step** (when present): Country already = <YOUR COUNTRY> (profile); fill postal code
   `<POSTCODE>`, city/locality `<CITY>`, street/address `<CITY>, <STATE>` (bank/core.md §1)
   if empty; Continue.
 - **contact-info-module step** (when present): first/last name + email + phone are usually prefilled

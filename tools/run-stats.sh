@@ -9,18 +9,22 @@
 #                                                 launcher uses: it passes the sessions THIS run
 #                                                 created, so an operator's own session sitting in
 #                                                 the same project dir is never billed to the job)
-#   --brief                                       print "<cents>|<turns>|<input tokens>" and nothing
-#                                                 else, for a plain-English report
+#   --brief                                       print "<cents>|<turns>|<input tokens>|<usd>" and
+#                                                 nothing else, for a plain-English report (the usd
+#                                                 field is the exact provider-reported figure)
 #
 # A run = one session transcript (a model switch resumes the same session, so attempts do not
 # fragment the accounting).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# The transcript location is provider-specific — see config/provider.conf (default = Command Code).
+[ -f "$ROOT/config/provider.conf" ] && . "$ROOT/config/provider.conf"
+: "${USAGE_PROJECTS_DIR:=$HOME/.commandcode/projects}"
 # the CLI names a project dir by lowercasing the cwd and turning every non-alphanumeric into '-'
 # /home/user/Documents/Job_Automation -> home-user-documents-job-automation
 SLUG="$(printf '%s' "$ROOT" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/^-\+//; s/-\+$//')"
-PROJ="$HOME/.commandcode/projects/$SLUG"
+PROJ="$USAGE_PROJECTS_DIR/$SLUG"
 
 BRIEF=0
 ARGS=()
@@ -34,7 +38,7 @@ case "$MODE" in
   --window) S="${ARGS[1]:?start epoch}"; E="${ARGS[2]:?end epoch}" ;;
   --since)  S="${ARGS[1]:?epoch}";       E="$(date +%s)" ;;
   --recent) S=0;                          E="$(date +%s)" ;;
-  --files)  shift_n=$(( ${#ARGS[@]} - 1 )); FILES=("${ARGS[@]:1}") ;;
+  --files)  FILES=("${ARGS[@]:1}") ;;
   *) echo "usage: run-stats.sh [--recent [N] | --window <s> <e> | --since <s> | --files <f>...] [--brief]" >&2; exit 2 ;;
 esac
 N="${ARGS[1]:-12}"
@@ -93,7 +97,7 @@ for _, _, _, t in rows:
     gi += t["in"]; go += t["out"]; gr += t["cacheRead"]; gcost += t["cost"]
 
 if brief:
-    print(f"{round(gcost * 100)}|{sum(r[2] for r in rows)}|{gi}")
+    print(f"{round(gcost * 100)}|{sum(r[2] for r in rows)}|{gi}|{gcost:.6f}")
     sys.exit(0)
 
 if not rows:

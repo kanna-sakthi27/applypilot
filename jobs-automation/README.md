@@ -24,13 +24,13 @@ Two consequences worth remembering:
 - **A jobs.ch login is what makes an apply work** (Easy apply is built for registered users). The
   preflight probes jobs.ch login state; a signed-out run is blocked with a plain instruction to sign
   in rather than silently doing nothing.
-- **The Swiss market is German/French/Italian-first.** the candidate speaks English + Tamil only, so a large
+- **The Swiss market is German/French/Italian-first.** the candidate speaks only the languages in `bank/core.md`, so a large
   share of postings is skipped on language. A high skip rate here is normal and by design.
 
 ## What jobs.ch adds (and what makes it noisy)
 
 - cards/badges **without** "Easy apply" are external company-site applies → skip;
-- many postings **require German (or French/Italian)** → skip (English + Tamil only);
+- many postings **require German (or French/Italian)** → skip (only the languages in `bank/core.md`);
 - many ads **hide the salary band** behind login — judge from the ad text and skip only an *explicit*
   band below the CHF floor (5,700/mo);
 - some postings are **hourly / day-rate** → skipped by rule.

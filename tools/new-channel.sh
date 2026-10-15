@@ -28,7 +28,7 @@ cat > "$dir/run-log.md" <<EOF
 # $site — run log
 
 This channel holds ONLY its logs. **Every form answer comes from the single bank \`bank/core.md\`**.
-§5 = unanswered questions (the candidate fills \`bank/OPEN-QUESTIONS.md\`); §6 = this channel run log (the
+§5 = unanswered questions (candidate policy fills \`bank/OPEN-QUESTIONS.md\`); §6 = this channel run log (the
 source of the per-day submission cap). Channel mechanics live in \`RULESET.md\`.
 
 ---

@@ -2,7 +2,8 @@
 
 You are the LinkedIn DevOps auto-apply run for the candidate. Apply via **LinkedIn Easy Apply** only.
 Country rotation: free choice — rotate 3+ markets per run to keep supply fresh (UAE/GCC, Singapore,
-Netherlands, remote-global, UK, Germany, Australia, Canada, US, India, Malaysia). Senior/lead only.
+Netherlands, UK, Germany, Switzerland, Finland, Portugal, Romania, Australia, Canada, India,
+Malaysia, remote-global). Senior/lead only.
 
 ## Tab handling
 `agent-browser tab list` → switch to the tab whose URL contains `linkedin.com` on a jobs/search path
@@ -57,7 +58,7 @@ At the resume step of the Easy Apply modal:
 2. Let LinkedIn generate it — wait, do not re-click. Continue the apply with the tailored resume
    selected.
 3. If it is genuinely absent (not every posting shows it; it can be market- or account-gated), use the
-   canonical resume (`linkedin-automation/cv/CV_latest.pdf`) and continue. **Never skip a job
+   canonical resume (`linkedin-automation/cv/CV.pdf`) and continue. **Never skip a job
    because tailoring is unavailable.**
 4. Record what you created, so the next run does not rediscover it:
    - `tools/li-resume-ledger.sh add "<jobId>" "<title>" "<company>" "<resume name LinkedIn shows>"`
@@ -67,7 +68,7 @@ At the resume step of the Easy Apply modal:
 
 ### Keep only 5 tailored resumes (rotate)
 
-the candidate wants at most **5** automation-made tailored resumes on her LinkedIn account. Only after the
+the candidate wants at most **5** automation-made tailored resumes on your LinkedIn account. Only after the
 application is CONFIRMED submitted:
 
 1. `tools/li-resume-ledger.sh over` — lists the entries older than the newest 5 (highest first is
@@ -78,7 +79,7 @@ application is CONFIRMED submitted:
 3. Also prune any local copies: `tools/cv-rotate.sh` (keeps the newest 5 in `cv/variants/`).
 
 GUARDS — never break these:
-- **Never delete the canonical base resume** (`CV_latest.pdf`) and **never delete a resume the
+- **Never delete the canonical base resume** (`CV.pdf`) and **never delete a resume the
   ledger does not list** — anything else is the candidate's own.
 - Delete only AFTER a confirmed submit, never while a form is still open.
 - If you cannot find where to delete safely, leave it, log it, and tell the candidate on Telegram rather than

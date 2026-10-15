@@ -1,3 +1,11 @@
+> Deep-dive notes for this channel: site mechanics and hard-won history. The runbook that
+> actually executes is `prompts/<channel>.md` + `prompts/_shared.md`, and **every form answer
+> comes from `bank/core.md`** — where this file and the bank disagree, the bank wins.
+>
+> Some notes here come from earlier incarnations of this system: anything mentioning
+> `browser action=…` or selecting a browser *profile* refers to a driver API that no longer
+> exists. The runbook drives the browser with the `agent-browser` CLI.
+
 # Workopolis Auto-Apply — Ruleset (v1, 2026-09-20)
 
 Operating rules for the scheduled **workopolis** channel for the candidate (Alex Example).
@@ -52,12 +60,12 @@ responsibility must be infrastructure, else SKIP + log.
 
 **Canada-specific skip list:** posted band below the **CAD floor (C$116k/yr, ≈ CAD 9,700/mo)** ·
 **hourly / day-rate / sub-12-month** postings (regardless of the rate) · **French-language** postings
-(English + Tamil only) · roles demanding existing Canadian work authorization / citizenship / PR.
+(only the languages in `bank/core.md`) · roles demanding existing Canadian work authorization / citizenship / PR.
 
 ## 3. Guardrails (never cross)
 
 1. **Never invent facts.** Every answer comes from `bank/core.md`. `core.md` wins on any conflict.
-2. **Visa is answered truthfully and the application is SUBMITTED.** Outside Sri Lanka: sponsorship
+2. **Visa is answered truthfully and the application is SUBMITTED.** Outside your home country: sponsorship
    **Yes**, authorized to work **No**. Do not self-skip because the ad omits sponsorship — let the
    employer decide. Skip only an explicit wall (no sponsorship offered, citizens/PR only, must
    already hold work authorization).
@@ -67,7 +75,7 @@ responsibility must be infrastructure, else SKIP + log.
 4. **A missing skill is not automatically a wall** — see `core.md` §5. Apply when the tool is one
    line in a broader stack; answer its experience question truthfully; never tick it as held.
 5. **Never bulk-apply.** One job at a time, 1.5–3 s between steps, verify state after each action.
-6. **Never answer salary below USD 8,000/mo expected / USD 7,000/mo floor** (CAD values in
+6. **Never answer salary below USD <EXPECTED_MONTHLY_USD>/mo expected / USD <FLOOR_MONTHLY_USD>/mo floor** (CAD values in
    bank/core.md §3). Never state a nationality other than **<NATIONALITY>**.
 7. **Daily cap 30** submitted per day for this channel (counted from this channel's §6, MYT);
    **per-run target 15**. Never exceed the cap.
@@ -113,14 +121,14 @@ are honoured; pagination is a `cursor=…` link. Locations rotate:
 ## 6. Browser discipline
 
 - `agent-browser connect 9222` first, always — otherwise agent-browser drives its own bundled Chrome
-  with none of the candidate's logins and every site looks signed out. (The launcher's preflight already
+  with none of your logins and every site looks signed out. (The launcher's preflight already
   fails the run in that case; do not "work around" it.)
 - Prefer one compact `eval` returning JSON over a full `snapshot -i`; snapshots of results pages cost
   thousands of tokens.
 - Never click Sign out / Log out / Switch account, never clear cookies or site data, never run
   `agent-browser close` / `close --all`, never navigate to a /login or /signin URL.
 - Work only in tabs this run opened; **close those tabs** when each job is done. the candidate's own tabs
-  (she keeps Workopolis, Indeed, LinkedIn, Job Bank and Eluta open) are never touched.
+  (you keeps Workopolis, Indeed, LinkedIn, Job Bank and Eluta open) are never touched.
 - If Brave is unreachable → the launcher reports it; do not retry in a loop.
 
 ## 7. State

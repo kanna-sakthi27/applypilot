@@ -34,6 +34,7 @@ CURRENCY_ALIASES = {
     "inr": "INR", "₹": "INR", "rs": "INR",
     "myr": "MYR", "rm": "MYR",
     "hkd": "HKD", "nzd": "NZD", "chf": "CHF",
+    "ron": "RON", "lei": "RON", "jpy": "JPY", "yen": "JPY", "¥": "JPY",
 }
 
 # A bare "$" is resolved by the job's country.
@@ -140,7 +141,7 @@ _NUM = re.compile(r"(\d[\d,\.]*)\s*([kK])?")
 
 
 def _numbers(text: str) -> list[float]:
-    """Extract the numbers in a salary string, applying <OTHER_NATIONALITY> lakh / million notation.
+    """Extract the numbers in a salary string, applying Indian lakh / million notation.
 
     A bare small number only gets scaled when the text carries a unit word, so "INR 15-18 L/yr"
     becomes 1.5M-1.8M while "70,000" is left alone.
@@ -254,7 +255,7 @@ def load_recent_skips(workspace: Path, days: int = 7) -> set[str]:
     cutoff = datetime.now() - timedelta(days=days)
     cutoff_str = cutoff.strftime("%Y-%m-%d")
     for log in (*Path(workspace).glob("*-automation/run-log.md"),
-                *Path(workspace).glob("*-automation/answers.md")):
+                *Path(workspace).glob("*-automation/bank/core.md")):
         for line in log.read_text(errors="ignore").splitlines():
             if not line.startswith("|") or "| skipped |" not in line:
                 continue

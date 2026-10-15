@@ -8,7 +8,7 @@ So the discovery is Workopolis, the application is the Indeed flow, and the answ
 
 ## Recon facts (verified live 2026-09-20 — do not re-verify)
 
-- the candidate is **logged in** (header shows her avatar "AS"). A Workopolis login is NOT what makes an
+- the candidate is **logged in** (header shows your avatar "AS"). A Workopolis login is NOT what makes an
   apply work: the Quick-apply `/out?r=…` link is an unauthenticated outbound tracker. The session
   that matters is the **Indeed** one (`ca.indeed.com`), and it is alive.
 - **Search URL** (the only form that is honoured):
@@ -50,7 +50,7 @@ supply is genuinely dry. Workopolis is Canada-only, so the rotation is by LOCATI
   index is smaller and noisier than Indeed's — two pages per search round is usually the ceiling.
 - If ~8–10 titles in a row are out of scope, do NOT page deeper — change location or keyword.
 - Quebec postings are often French-only (`Développeur DevOps`) — skip roles written in French
-  (the candidate's languages are English and Tamil only, core.md §6).
+  (the candidate's languages are English and <SECOND LANGUAGE> only, core.md §6).
 
 ## Apply flow (one job at a time, all in ONE tab)
 
@@ -66,11 +66,11 @@ supply is genuinely dry. Workopolis is Canada-only, so the rotation is by LOCATI
    `resume-selection-module` → `contact-info-module` / `profile-location` → `questions-module` /
    `questions/N` screener → attestation → `demographic-questions-module` (EEO) →
    `review-module` (100%) → Submit.
-   Map EVERY answer from `bank/core.md`. The two fields runs get wrong: **Nationality = <NATIONALITY>
-   ONLY** (never <OTHER_NATIONALITY>/<COUNTRY_OF_RESIDENCE>) and **Kubernetes — numeric years = 0, yes/no = Yes**.
-   Resume "ALEX EXAMPLE - CV.pdf" is preloaded on the Indeed profile — select it.
+   Map EVERY answer from `bank/core.md`. The two fields runs get wrong: **Nationality = <YOUR NATIONALITY>
+   ONLY** (never Indian/Malaysian) and **Kubernetes — numeric years = 0, yes/no = Yes**.
+   Resume CV.pdf is preloaded on the Indeed profile — select it.
    Salary: pick the currency the form offers; for CAD use **11,100/mo (132,700/yr)** from core.md §3.
-   Visa: outside Sri Lanka, sponsorship = **Yes**, authorized = **No** — answer truthfully and SUBMIT;
+   Visa: outside your home country, sponsorship = **Yes**, authorized = **No** — answer truthfully and SUBMIT;
    only an explicit "no sponsorship / must already hold work auth / citizens or PR only" is a skip.
    *If a module does not behave as described below, read `prompts/indeed.md` ONCE — its "Smartapply
    flow" section is the full field-by-field mapping for this exact wizard.*

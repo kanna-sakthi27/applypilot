@@ -3,7 +3,7 @@
 #
 # Locks down the 2026-10-12 fix:
 #   * a run-created [hosts] tab is closed;
-#   * a PRE-EXISTING [hosts] tab is PROTECTED (the candidate keeps job-board tabs herself);
+#   * a PRE-EXISTING [hosts] tab is PROTECTED (candidate policy keeps job-board tabs herself);
 #   * a [reclaim] tab (company ATS / apply page) is closed EVEN IF pre-existing — this is what stops
 #     an already-leaked apply tab from living forever;
 #   * `reclaim` mode touches ONLY [reclaim] hosts;

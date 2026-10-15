@@ -7,11 +7,23 @@
 #   * free models first, in order; a paid model is only tried while the quota gate allows
 #   * full log per run + Telegram report either way
 #
-# Channels: linkedin | indeed | glassdoor | jaabz | workopolis | jobs
+# Channels: linkedin | indeed | jaabz | workopolis | jobs | thehub | itjobs | relocate
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 1
+
+# --- branch guard: the automation runs from `master` only ---------------------
+# cron invokes this script by absolute path from this folder. If the folder is
+# left on another branch (e.g. after branch work), refuse rather than silently
+# running that branch's engine. Do branch work in a separate `git worktree`
+# (which keeps `master` checked out here), or set JOB_APPLY_ALLOW_BRANCH=1.
+_branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+if [ -n "$_branch" ] && [ "$_branch" != "master" ] && [ "${JOB_APPLY_ALLOW_BRANCH:-0}" != 1 ]; then
+  echo "cron-run.sh: refusing to run — repo is on branch '$_branch', not 'master'." >&2
+  echo "             Do branch work in a separate worktree, or set JOB_APPLY_ALLOW_BRANCH=1." >&2
+  exit 2
+fi
 
 # Load .env values ONLY for variables not already present in the environment. That way an
 # explicit override — e.g. the parameters the browser extension's native host exports — always
@@ -28,6 +40,17 @@ load_env_defaults() {
   done < "$f"
 }
 load_env_defaults "$ROOT/.env"
+
+# --- provider plumbing: where usage/cost + the spend gate come from --------------------------
+# Everything Command-Code-specific (the session transcripts that carry the REAL cost, the cost
+# command, the spend gate) lives in config/provider.conf, so moving to another provider is an edit
+# there — not in this launcher. The `:=` defaults reproduce the current behaviour if that file (or
+# any one line) is missing.
+[ -f "$ROOT/config/provider.conf" ] && . "$ROOT/config/provider.conf"
+: "${PROVIDER_NAME:=commandcode}"
+: "${USAGE_PROJECTS_DIR:=$HOME/.commandcode/projects}"
+: "${USAGE_STATS_CMD:=$ROOT/tools/run-stats.sh}"
+: "${QUOTA_CMD:=$ROOT/tools/cc-quota}"
 
 CH=""
 DRY_RUN=0
@@ -46,6 +69,10 @@ while [ $# -gt 0 ]; do
   shift
 done
 [ "${JOB_APPLY_DRY_RUN:-}" = "1" ] && DRY_RUN=1
+# Propagate to the pre-flight, which skips its intrusive deep login probe when it knows this is a
+# dry run. It reads JOB_APPLY_DRY_RUN, so the value must be EXPORTED — a bare shell var here is
+# invisible to the child, and a dry run would otherwise open a probe tab in the candidate's browser.
+if [ "$DRY_RUN" = 1 ]; then export JOB_APPLY_DRY_RUN=1; fi
 case "$MODE" in auto|scan|apply) ;; *) echo "bad --mode '$MODE' (auto|scan|apply)" >&2; exit 2 ;; esac
 if [ -z "$CH" ] || [ ! -f "$ROOT/prompts/$CH.md" ]; then
   echo "usage: cron-run.sh <channel> [--dry-run] [--mode auto|scan|apply] [--candidates <file>] [--run-id <id>]" >&2
@@ -61,10 +88,12 @@ fi
 case "$CH" in
   linkedin)          CHNAME="LinkedIn" ;;
   indeed)            CHNAME="Indeed" ;;
-  glassdoor)         CHNAME="Glassdoor" ;;
   jaabz)             CHNAME="Jaabz" ;;
   workopolis)        CHNAME="Workopolis" ;;
   jobs)              CHNAME="Jobs.ch" ;;
+  thehub)            CHNAME="The Hub" ;;
+  itjobs)            CHNAME="ITJobs.pt" ;;
+  relocate)          CHNAME="Relocate.me" ;;
   *)                 CHNAME="$CH" ;;
 esac
 
@@ -105,7 +134,7 @@ PROJ="$HOME/.commandcode/projects/$SLUG"
 # cap is not going to behave differently on the next run an hour later. Remember that here so we
 # stop burning 10 minutes of wall clock (and a run slot) rediscovering it on every channel.
 STATE_DIR="$ROOT/state"; MODEL_STATE="$STATE_DIR/models.state"; STRIKES="$STATE_DIR/model-strikes"
-# Compensation ledger: how many applies this channel owes from earlier skips (the candidate wants 0 skipped —
+# Compensation ledger: how many applies this channel owes from earlier skips (candidate policy wants 0 skipped —
 # every skipped job must be paid for by an applied one). Carried across runs, capped so a genuinely
 # dry or external-only board can't build an impossible demand.
 DEBT_FILE="$STATE_DIR/apply-debt-$CH"
@@ -145,6 +174,13 @@ strike_count_today() {
 mkdir -p "$ROOT/logs"
 exec 9>"$LOCK"
 say() { echo "[$(date '+%F %T')] $*"; }
+# Housekeeping: sweep the throwaway per-run breadcrumbs (.preflight-* / .tabs-before-*) older than a
+# week. They are recreated every run and had accumulated to 1000+ files. Shell-only, best-effort,
+# and never touches the structured run dirs (those are the dashboard's history). Opt out with
+# JOB_APPLY_PRUNE=0.
+if [ "${JOB_APPLY_PRUNE:-1}" = 1 ]; then
+  "$ROOT/tools/prune-logs.sh" >>"$LOG" 2>&1 || true
+fi
 # Every message is kept on disk (logs/.last-report-<channel>.txt) so it can be reviewed without
 # digging through a run log; the selftest channel stops there instead of messaging the candidate.
 notify() {
@@ -161,11 +197,11 @@ applied_so_far() {
 }
 
 # Should this channel's slot be skipped? A channel that applied 0 in its last 3 runs is throttled to
-# roughly every 6h until it yields again — dry boards (workopolis/jaabz/glassdoor) otherwise burn a
+# roughly every 6h until it yields again — dry boards (workopolis/jaabz) otherwise burn a
 # full AI session every 2h for nothing. Returns 0 = skip this slot, 1 = run.
 throttle_skip() {
   [ "${JOB_APPLY_THROTTLE:-1}" = 1 ] || return 1
-  local hist n zeros h
+  local hist n zeros last last_epoch
   hist="$(grep -a "run end channel=$CH " "$ROOT/logs/cron.log" 2>/dev/null | tail -3)"
   n="$(printf '%s\n' "$hist" | grep -c . || true)"
   [ "${n:-0}" -ge 3 ] || return 1
@@ -173,8 +209,14 @@ throttle_skip() {
   # failed or no-opped is not evidence of a dry channel.
   zeros="$(printf '%s\n' "$hist" | grep 'worked=1' | grep -c 'applied=0 ' || true)"
   [ "${zeros:-0}" -eq 3 ] || return 1
-  h="$(date +%-H)"
-  [ $(( h % 6 )) -eq 0 ] && return 1
+  # Throttled (applied 0 in its last 3 productive runs): allow ONE run per 6h. Measure against the
+  # channel's LAST ACTUAL run, not the wall-clock hour — the old `h % 6 == 0` test was never true for
+  # a channel scheduled on odd hours (jobs, workopolis), so those were throttled off permanently.
+  last="$(grep -a "run end channel=$CH " "$ROOT/logs/cron.log" 2>/dev/null | tail -1 \
+          | sed -n 's/^\[\([0-9-]\{10\} [0-9:]\{8\}\)\].*/\1/p')"
+  [ -n "$last" ] || return 1
+  last_epoch="$(date -d "$last" +%s 2>/dev/null || echo 0)"
+  [ "$(( $(date +%s) - last_epoch ))" -ge 21600 ] && return 1
   return 0
 }
 
@@ -231,7 +273,7 @@ if ! flock -n 9; then
 fi
 if ! flock -n 9; then
   say "SKIP $CH — browser lock still held after waiting ${JOB_APPLY_LOCK_WAIT_SECONDS:-1500}s"
-  printf 'Job hunt — %s\n\nAnother run was using the browser and did not finish within the wait, so this one skipped.\n' "$CHNAME" \
+  printf 'Job hunt — %s — skipped (browser busy)\n' "$CHNAME" \
     | notify >/dev/null 2>&1 || true
   exit 0
 fi
@@ -243,12 +285,27 @@ if throttle_skip; then
   exit 0
 fi
 
+# --- per-run model order (provider picker) --------------------------------------------------
+# Free models come and go. Rather than a fixed list, ask the provider (config/provider.conf:
+# MODELS_PICK_CMD) for TODAY's order — a working free model first, then a cheaper paid model, then
+# the final fallback (deepseek latest). If the picker is absent or prints nothing, keep APPLY_MODELS,
+# so this is purely additive.
+if [ -n "${MODELS_PICK_CMD:-}" ]; then
+  PICKED="$(timeout "${APPLY_PICK_TIMEOUT:-180}" $MODELS_PICK_CMD 2>/dev/null || true)"
+  # The picker must return ONLY a comma-separated list of model slugs. If it returns anything else
+  # (a misconfigured picker, a catalogue dump, an error), reject it and keep APPLY_MODELS — junk must
+  # never reach MODELS.
+  case "$PICKED" in ''|*[!A-Za-z0-9._,:/-]*) PICKED="" ;; esac
+  if [ -n "$PICKED" ]; then MODELS="$PICKED"; say "model order (picked): $MODELS"
+  else say "model picker returned nothing usable — using APPLY_MODELS ($MODELS)"; fi
+fi
+
 # --- budget governor: near the plan limit → FREE models only, so a scheduled run can never push us
 # over. These thresholds are self-imposed and stricter than the hard gate (which only trips at 95/100%).
 BUDGET_FREE_ONLY=0
 if [ "${JOB_APPLY_BUDGET_GOVERNOR:-1}" = 1 ]; then
   # Read all THREE windows (the hard gate only knows weekly+monthly; the 5-hour burst window matters too).
-  gov="$("$ROOT/tools/cc-quota" --json 2>/dev/null | python3 -c '
+  gov="$("$QUOTA_CMD" --json 2>/dev/null | python3 -c '
 import json, sys
 try:
     d = json.load(sys.stdin)
@@ -271,7 +328,7 @@ print(("BLOCK " + ",".join(hit)) if hit else "ALLOW ")
         say "budget governor: ${gov#BLOCK } window(s) near the limit — paid dropped, FREE models only ($MODELS)"
       else
         say "budget governor: near the plan limit and no free models — skipping to protect the budget"
-        printf 'Job hunt — %s\n\nBudget is nearly used up, so this run was skipped to protect your limit. It will resume when the window resets.\n' "$CHNAME" \
+        printf 'Job hunt — %s — skipped (budget)\n' "$CHNAME" \
           | notify >/dev/null 2>&1 || true
         exit 0
       fi ;;
@@ -281,7 +338,7 @@ fi
 say "run start channel=$CH models=$MODELS timeout=${TIMEOUT}s maxturns=$MAXTURNS mode=$MODE"
 say "log=$LOG session=$SESSION"
 
-# Once a day, nudge the candidate on Telegram about any still-open bank questions (§5), so she can fold the
+# Once a day, nudge the candidate on Telegram about any still-open bank questions (§5), so you can fold the
 # answers into bank/core.md. Shell-only and cheap, and independent of how this run turns out.
 [ "$CH" != selftest ] && "$ROOT/tools/bank-reminder.sh" >/dev/null 2>&1 || true
 
@@ -326,30 +383,20 @@ if [ "$PFRC" -ne 0 ]; then
     fi
     exit 3
   fi
-  # Plain-English reason. the candidate does not need (or want) the preflight dump with its budget maths,
-  # session probes and dedupe lists — she needs to know what to do.
+  # Short reason — ONE line, no dump. the candidate wants to know what happened, not the reasoning.
   case "$reason" in
     *"logged out of:"*)
       who="$(printf '%s' "$reason" | sed -n 's/.*logged out of: *\([^.]*\).*/\1/p' \
         | sed -e 's/indeed/Indeed/g' -e 's/linkedin/LinkedIn/g' -e 's/jaabz/Jaabz/g' -e 's/, / and /g')"
-      PLAIN="You're signed out of ${who} in the browser, so it had nothing to apply with.
-
-Sign back in and it will run again at the next scheduled time." ;;
-    *"NOT attached"*)
-      PLAIN="It couldn't attach to your browser, so it didn't run. Nothing was submitted.
-
-It will try again next time — tell me if this keeps happening." ;;
-    *"not reachable"*)
-      PLAIN="Your browser wasn't running, so it didn't run. It will try again next time." ;;
+      PLAIN="signed out of ${who}" ;;
+    *"NOT attached"*)  PLAIN="browser not attached" ;;
+    *"not reachable"*) PLAIN="browser not running" ;;
     *"bot wall"*)
       who="$(printf '%s' "$reason" | sed -n 's/.*bot wall) on: *\([^—]*\).*/\1/p' | sed 's/[[:space:]]*$//')"
-      PLAIN="${who} is showing a security check instead of the site, so it had nothing to apply with.
-
-This is the site blocking automated access — not a login problem, so signing in won't clear it.
-It usually lifts after a few hours of quiet, so I will leave it alone for now." ;;
+      PLAIN="bot wall on ${who}" ;;
     *) PLAIN="$reason" ;;
   esac
-  printf "Job hunt — %s — didn't run\n\n%s\n" "$CHNAME" "$PLAIN" | notify >/dev/null 2>&1 || true
+  printf "Job hunt — %s — didn't run: %s\n" "$CHNAME" "$PLAIN" | notify >/dev/null 2>&1 || true
   cp "$PREFLIGHT_FILE" "$LOG" 2>/dev/null || true
   rm -f "$PREFLIGHT_ERR"
   # The run directory was created before the pre-flight, so close it out here. Without this it stays
@@ -422,10 +469,10 @@ CONTINUE_PROMPT="Continue this run from exactly where you left off — the brows
 # Where this channel records what it did. Snapshot the line count now so the report can say what
 # THIS run did rather than re-reading the whole log at the end.
 # The channel's run log. Derived from the channel name, so a NEW site only needs
-# <site>-automation/run-log.md + prompts/<site>.md — no edit here. (answers.md is the pre-rename
+# <site>-automation/run-log.md + prompts/<site>.md — no edit here. (bank/core.md is the pre-rename
 # name; selftest and unknown channels have no log.)
 CHLOG="$ROOT/$CH-automation/run-log.md"
-[ -f "$CHLOG" ] || CHLOG="$ROOT/$CH-automation/answers.md"
+[ -f "$CHLOG" ] || CHLOG="$ROOT/$CH-automation/bank/core.md"
 [ -f "$CHLOG" ] || CHLOG=""
 ROWS_BEFORE=0
 if [ -n "$CHLOG" ] && [ -f "$CHLOG" ]; then ROWS_BEFORE="$(wc -l <"$CHLOG")"; fi
@@ -493,7 +540,15 @@ if [ "$DRY_RUN" = 1 ]; then
   echo "preflight    : $(head -c 200 "$PREFLIGHT_FILE")"
   echo "command      : $CMD_BIN -p <prompt> --yolo --skip-onboarding --no-auto-update --max-turns $MAXTURNS -n $SESSION --model <first model>"
   echo "no model was invoked, nothing was sent."
-  rm -f "$PREFLIGHT_ERR"
+  rm -f "$PREFLIGHT_ERR" "$PREFLIGHT_FILE"
+  # This dry run created its own run dir above (structured.py new-run). Leaving it behind pollutes
+  # the dashboard with a run stuck at status "running" for ever, so drop it — but only the one WE
+  # made (never a --run-id handed in for reuse), and only under this workspace's logs/runs.
+  if [ -z "$REUSE_RUN_ID" ] && [ -n "$RUN_DIR" ]; then
+    case "$RUN_DIR" in
+      "$ROOT"/logs/runs/*) rm -rf "$RUN_DIR" ;;
+    esac
+  fi
   exit 0
 fi
 
@@ -541,7 +596,7 @@ while [ "$i" -lt "${#ARR[@]}" ]; do
   case "$m" in
     *:free|*-free) : ;;
     *)
-      if ! "$ROOT/tools/cc-quota" --gate >/dev/null 2>&1; then
+      if ! "$QUOTA_CMD" --gate >/dev/null 2>&1; then
         say "quota gate BLOCKED paid model $m — skipping it for the free fallbacks"
         continue
       fi
@@ -673,7 +728,7 @@ while [ "$i" -lt "${#ARR[@]}" ]; do
   fi
   if [ "$RC" -eq 8 ]; then
     # A FREE model that hit the turn cap without submitting gets NO resume: hand the rest of the run
-    # to the paid fallback now, rather than spending more budget on the free model (the candidate 2026-10-11:
+    # to the paid fallback now, rather than spending more budget on the free model (candidate policy 2026-10-11:
     # "if free models fail, immediately try deepseek in the same run").
     if is_free_model "$m" && [ "$WORKED" -eq 0 ] && [ -n "$(first_paid)" ]; then
       say "model=$m (free) hit the ${MAXTURNS}-turn cap without submitting — escalating to paid $(first_paid) now"
@@ -729,7 +784,7 @@ done
 if [ "$WORKED" -eq 0 ]; then
   fp="$(first_paid)"
   if [ -n "$fp" ] && [ $(( $(date +%s) - START )) -lt $(( TIMEOUT - 120 )) ]; then
-    if ! "$ROOT/tools/cc-quota" --gate >/dev/null 2>&1; then
+    if ! "$QUOTA_CMD" --gate >/dev/null 2>&1; then
       say "final paid fallback skipped — quota gate blocks paid spending"
     else
       att=$(( TIMEOUT - ( $(date +%s) - START ) )); [ "$att" -gt "$PER_MODEL" ] && att="$PER_MODEL"
@@ -780,7 +835,7 @@ fi
 # "FAILED (exit 1)" tells the candidate nothing and is not a failure of the automation.
 if [ -z "$USED" ]; then
   say "no model was available for this run (all cooled/limited)"
-  printf "Job hunt — %s — didn't run\n\nEvery model is unavailable right now. The free ones reset in the morning; nothing is broken, it will try again at the next scheduled time.\n" "$CHNAME" \
+  printf "Job hunt — %s — didn't run: no model available\n" "$CHNAME" \
     | notify >/dev/null 2>&1 || true
   say "run end channel=$CH verdict=no-model duration=${DUR}s"
   exit 4
@@ -790,15 +845,9 @@ fi
 # the job. That is the silent failure the operator used to see as "it ran and applied to nothing",
 # so name it and make it visible instead of reporting a successful run.
 if [ "$WORKED" -eq 0 ]; then
-  # No model recorded a single decision: this is a MODEL problem, NOT a dry market. Say so plainly, and
-  # name the budget mode, so a "0" is never mistaken for "nothing in scope to apply to".
-  if [ "$BUDGET_FREE_ONLY" = 1 ]; then
-    why="The budget is nearly used up, so this run was limited to the FREE models, and they did not manage to submit anything"
-  else
-    why="Every model failed or produced nothing (tried: ${TRIED:-none}), so nothing was submitted"
-  fi
+  # No model recorded a single decision: this is a MODEL problem, NOT a dry market.
   say "no model did any work (models=$USED rc=$RC free_only=$BUDGET_FREE_ONLY)"
-  printf "Job hunt — %s — didn't run\n\n%s. It will try again at the next scheduled time.\n" "$CHNAME" "$why" \
+  printf "Job hunt — %s — didn't run: models produced nothing\n" "$CHNAME" \
     | notify >/dev/null 2>&1 || true
   say "run end channel=$CH verdict=no-work models=$USED duration=${DUR}s applied=0 skipped=0 worked=0"
   exit 4
@@ -812,7 +861,7 @@ case "$RC" in
 esac
 
 # --- token accounting (kept in the log for the operator, not sent to the candidate) --------
-STATS="$("$ROOT/tools/run-stats.sh" --recent 1 2>/dev/null | tail -4)"
+STATS="$("$USAGE_STATS_CMD" --recent 1 2>/dev/null | tail -4)"
 [ -n "$STATS" ] && echo "$STATS" >>"$LOG"
 
 # --- report: written for a human. No log paths, no raw token dumps. ----------------
@@ -821,7 +870,7 @@ STATS="$("$ROOT/tools/run-stats.sh" --recent 1 2>/dev/null | tail -4)"
 # Strip one pipe from each end so BOTH shapes split identically — then $1=date, $2=title,
 # $3=action, $4=reason. (Without this a pipe-less row landed the action in $3 and the report printed
 # "• applied" instead of the job title — seen on 2026-10-12.)
-NEW_ROWS=""; ROWS_NORM=""; APPLIED=0; SKIPPED=0; APPLIED_LIST=""; SKIP_WHY=""
+NEW_ROWS=""; ROWS_NORM=""; APPLIED=0; SKIPPED=0; APPLIED_LIST=""
 norm_rows() { sed -E 's/^[[:space:]]*\|//; s/\|[[:space:]]*$//'; }
 if [ -n "$CHLOG" ] && [ -f "$CHLOG" ]; then
   NEW_ROWS="$(tail -n +$(( ROWS_BEFORE + 1 )) "$CHLOG" 2>/dev/null)"
@@ -833,34 +882,6 @@ if [ -n "$CHLOG" ] && [ -f "$CHLOG" ]; then
   APPLIED_LIST="$(printf '%s\n' "$ROWS_NORM" | awk -F'|' '
     { act=$3; gsub(/^[ \t]+|[ \t]+$/,"",act); if (act!="applied") next
       t=$2; gsub(/^[ \t]+|[ \t]+$/,"",t); sub(/ \([^)]*\)$/,"",t); if (t!="") print t }' | head -12)"
-  # Category the skip by its TRUE cause (the candidate 2026-10-12): "wrong kind of role" used to swallow
-  # closed postings, captcha/login walls and language walls, and "need visa sponsorship" read as if the
-  # JOB needed sponsorship when it means the job DEMANDS existing work authorization.
-  SKIP_WHY="$(printf '%s\n' "$ROWS_NORM" | awk -F'|' '
-    { act=$3; gsub(/^[ \t]+|[ \t]+$/,"",act); if (act!="skipped") next
-      r = tolower($4)
-      if (r ~ /dup|already|previously/)                                     a++
-      else if (r ~ /clos|expired|no longer|filled|not accepting/)           b++
-      else if (r ~ /sponsor|visa|citizen|right.to.work|work authoris|work authoriz|clearance|authoris|authoriz|work permit|resid|locat|must be based|based in/) c++
-      else if (r ~ /external|company site|employer site|off linkedin|browser|no easy apply/) d++
-      else if (r ~ /language|german|french|dutch|finnish|swedish|danish|norwegian|italian|spanish/) e++
-      else if (r ~ /hourly|day.rate|per.hour|per.day|fixed.term/)           f++
-      else if (r ~ /below floor|salary|compensation|\bpay\b/)                g++
-      else if (r ~ /captcha|recaptcha|account|login|log.in|verification|challenge|wall/) h++
-      else if (r ~ /kubernetes|openshift|python|argocd|gitops|github actions|helm|gcp|azure|terraform|ansible/) i++
-      else                                                                  j++ }
-    END { out = ""
-      if (a) out = out a " were already applied"
-      if (b) out = out (out ? " · " : "") b " were closed / no longer accepting"
-      if (c) out = out (out ? " · " : "") c " require existing work authorization (no sponsorship)"
-      if (d) out = out (out ? " · " : "") d " only accept applications on the company site"
-      if (e) out = out (out ? " · " : "") e " needed a language you do not have"
-      if (f) out = out (out ? " · " : "") f " were hourly / day-rate contracts"
-      if (g) out = out (out ? " · " : "") g " paid below your floor"
-      if (h) out = out (out ? " · " : "") h " were blocked by a captcha or login wall"
-      if (i) out = out (out ? " · " : "") i " wanted skills not on your CV"
-      if (j) out = out (out ? " · " : "") j " were out of scope"
-      print out }')"
 fi
 
 COSTLINE=""
@@ -870,50 +891,27 @@ while IFS= read -r f; do
   case " $BASELINE_SESSIONS " in *" $(basename "$f") "*) ;; *) RUN_SESSIONS+=("$f") ;; esac
 done < <(ls -1 "$PROJ"/*.jsonl 2>/dev/null)
 if [ "${#RUN_SESSIONS[@]}" -gt 0 ]; then
-  BRIEF="$("$ROOT/tools/run-stats.sh" --brief --files "${RUN_SESSIONS[@]}" 2>/dev/null)"
-  IFS='|' read -r CENTS _TURNS _TOKENS <<<"$BRIEF"
-  if [ -n "${CENTS:-}" ]; then
-    if [ "$APPLIED" -gt 0 ]; then
-      PER=$(( CENTS / APPLIED )); [ "$PER" -lt 1 ] && PER=1
-      CWORD="cents"; [ "$CENTS" -eq 1 ] && CWORD="cent"
-      PWORD="cents"; [ "$PER" -eq 1 ] && PWORD="cent"
-      COSTLINE="Cost: about ${CENTS} ${CWORD} in total — roughly ${PER} ${PWORD} per application."
-    else
-      CWORD="cents"; [ "$CENTS" -eq 1 ] && CWORD="cent"
-      COSTLINE="Cost: about ${CENTS} ${CWORD} (nothing new to apply to)."
-    fi
-  fi
+  # REAL cost for THIS run: run-stats sums usage.costUsd from the sessions this run created (field 4
+  # is exact USD; field 1 is rounded cents, kept for compatibility).
+  BRIEF="$("$USAGE_STATS_CMD" --brief --files "${RUN_SESSIONS[@]}" 2>/dev/null)"
+  IFS='|' read -r _CENTS _TURNS _TOKENS USD <<<"$BRIEF"
+  [ -n "${USD:-}" ] && COSTLINE="$(printf 'Cost: $%.4f' "$USD")"
 fi
 
+# Short and plain (candidate policy 2026-10-15): counts + real cost, then the applied list. No explanations.
 MSG="Job hunt — ${CHNAME}
-Applied: ${APPLIED}
-Skipped: ${SKIPPED}"
+Applied: ${APPLIED} · Skipped: ${SKIPPED}"
+[ -n "${USED:-}" ] && MSG="${MSG}
+Model: ${USED}"
+[ -n "$COSTLINE" ] && MSG="${MSG}
+${COSTLINE}"
 if [ "$APPLIED" -gt 0 ]; then
   [ -n "$APPLIED_LIST" ] || APPLIED_LIST="(see the channel run log)"
   MSG="${MSG}
 
 Applied to:
 $(printf '%s\n' "$APPLIED_LIST" | sed 's/^/• /')"
-else
-  MSG="${MSG}
-
-No new applications this time."
 fi
-[ -n "$SKIP_WHY" ] && MSG="${MSG}
-
-The ones skipped: ${SKIP_WHY}."
-[ "$BUDGET_FREE_ONLY" = 1 ] && MSG="${MSG}
-
-(Budget is nearly used up — this run used the FREE models only.)"
-[ -n "$COSTLINE" ] && MSG="${MSG}
-
-${COSTLINE}"
-case "$RC" in
-  0|8|124) ;;
-  *) MSG="${MSG}
-
-(It stopped early — worth a look if it keeps happening.)" ;;
-esac
 
 # --- compensation ledger: carry what this run still owes (only skips that COULD have been applies) ---
 # "Already applied / duplicate / closed / external-only" skips are excluded — nothing can turn those
@@ -932,11 +930,7 @@ OWED=$(( ${DEBT:-0} + CONV_SKIPPED - APPLIED ))
 [ "$OWED" -lt 0 ] && OWED=0
 [ "$OWED" -gt "${APPLY_DEBT_CAP:-20}" ] && OWED="${APPLY_DEBT_CAP:-20}"
 printf '%s\n' "$OWED" >"$DEBT_FILE" 2>/dev/null || true
-if [ "$OWED" -gt 0 ]; then
-  MSG="${MSG}
-
-Owed: ${OWED} more application(s) than applies — the next run on this channel will compensate for the skipped jobs."
-fi
+# Debt is carried silently — the Applied/Skipped counts above already show it; no prose (candidate policy 2026-10-15).
 
 printf '%s\n' "$MSG" | notify >/dev/null 2>&1 || true
 say "run end channel=$CH verdict=$VERDICT model=$USED duration=${DUR}s applied=$APPLIED skipped=$SKIPPED worked=$WORKED debt=$OWED"

@@ -18,7 +18,7 @@ from pathlib import Path
 
 STOPWORDS = set("""
 a an the and or but if then than that this these those for with without within from into onto over
-under about above below you your we our they their he she it its is are was were be been being do
+under about above below you your we our they their he you it its is are was were be been being do
 does did doing have has had having will would shall should can could may might must not no nor so
 as at by in of on to up out off per via etc ie eg plus role job work working experience
 years year strong good excellent ability able across using use used help helps support supported

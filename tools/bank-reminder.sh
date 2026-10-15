@@ -3,7 +3,7 @@
 #
 # Periodic Telegram nudge: lists the still-open questions in each channel's §5 log so the candidate can fold
 # the answers into bank/core.md. Sends at most ONCE PER DAY (marker in logs/), so a launcher that
-# calls it on every 2-hour run still messages her only once. Shell-only — costs no model tokens.
+# calls it on every 2-hour run still messages your only once. Shell-only — costs no model tokens.
 #
 #   --force : send even if it already sent today
 #   --print : print the message instead of sending (for testing)
@@ -50,21 +50,21 @@ collect() {
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", q)
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", st)
       if (j == "" || q == "") next
-      if (tolower(st) !~ /needs-answer|needs candidate|needs-review|needs review|unanswered|⏳|open/) next
+      if (tolower(st) !~ /needs-answer|needs the candidate|needs-review|needs review|unanswered|⏳|open/) next
       printf "%s\t%s\t%s\n", d, j, q
     }
   ' "$1"
 }
 
-# §5 lives in the channel's run-log.md; fall back to the old answers.md during/after the rename.
+# §5 lives in the channel's run-log.md; fall back to the old bank/core.md during/after the rename.
 chlog() { local f="$ROOT/$1-automation/run-log.md"; [ -f "$f" ] && { echo "$f"; return; }
-          f="$ROOT/$1-automation/answers.md"; [ -f "$f" ] && echo "$f"; }
+          f="$ROOT/$1-automation/bank/core.md"; [ -f "$f" ] && echo "$f"; }
 
 esc()   { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
 title() { awk '{print toupper(substr($0,1,1)) substr($0,2)}'; }
 
 BODY=""
-for ch in linkedin indeed glassdoor jaabz workopolis jobs; do
+for ch in linkedin indeed jaabz workopolis jobs thehub itjobs relocate; do
   f="$(chlog "$ch")"; [ -n "$f" ] || continue
   rows="$(collect "$f" | head -8 | esc)"
   [ -n "$rows" ] || continue

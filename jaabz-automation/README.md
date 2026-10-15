@@ -7,7 +7,7 @@ foreign-direct automations, from live reconnaissance.
 ## What Jaabz is (verified live 2026-09-07)
 
 - **Job board of visa-sponsorship-friendly tech jobs only** (5,000+ jobs / 2,200+ companies / 50+
-  countries). Every listing is inherently sponsor-open — a great fit for the candidate (SL/IN dual national
+  countries). Every listing is inherently sponsor-open — a great fit for the candidate (the authorised countries dual national
   needing sponsorship).
 - Jaabz does **NOT host applications**. The "Apply Now" button on a job page is an **outbound cloaked
   link** to the real posting — most often the **same role on LinkedIn** (`*.linkedin.com/jobs/view/...`),

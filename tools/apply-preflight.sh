@@ -46,22 +46,26 @@ DAILY_CAP="${JOB_APPLY_DAILY_CAP:-30}"
 case "$CH" in
   linkedin)   SITES="linkedin|https://www.linkedin.com/feed/" ;;
   indeed)     SITES="indeed|https://www.indeed.com/" ;;
-  glassdoor)  SITES="indeed|https://www.indeed.com/" ;;
   jaabz)      SITES="jaabz|https://jaabz.com/ linkedin|https://www.linkedin.com/feed/" ;;
   # Workopolis is Indeed-powered: its "Quick apply" is an unauthenticated /out?r= redirect to
   # ca.indeed.com, so the session that decides whether an application can be submitted is the
   # INDEED one. Probing workopolis itself would only produce false "signed out" blocks — exactly
-  # the failure mode this preflight was written to avoid. (Same reasoning as glassdoor.)
+  # the failure mode this preflight was written to avoid.
   workopolis) SITES="indeed|https://www.indeed.com/" ;;
   # jobs.ch — Easy apply is built for registered users (fields + CV pre-filled), so the jobs.ch
   # login IS what makes an apply work; a positive signed-out signal should block and tell the candidate.
   jobs)       SITES="jobs|https://www.jobs.ch/en/" ;;
+  # thehub / itjobs / relocate — board login matters for discovery (and thehub's quick apply). Only a
+  # POSITIVE signed-out signal blocks, so an unknown state never stops a run.
+  thehub)     SITES="thehub|https://thehub.io/" ;;
+  itjobs)     SITES="itjobs|https://www.itjobs.pt/" ;;
+  relocate)   SITES="relocate|https://relocate.me/" ;;
   selftest)   SITES="" ;;
   *)          echo "unknown channel: $CH" >&2; exit 2 ;;
 esac
 # The channel's run log (this channel's daily-cap source). Falls back to the pre-rename name.
 CHLOG="$ROOT/$CH-automation/run-log.md"
-[ -f "$CHLOG" ] || CHLOG="$ROOT/$CH-automation/answers.md"
+[ -f "$CHLOG" ] || CHLOG="$ROOT/$CH-automation/bank/core.md"
 [ "$CH" = selftest ] && CHLOG="/dev/null"
 
 # A site list of "-" disables login probing entirely (documented in config/channels.conf).
@@ -78,7 +82,7 @@ blocked() { echo "PREFLIGHT BLOCKED ($CH): $1"; echo "[preflight] BLOCKED: $1" >
 
 # --- 1. browser: reach Brave, then make sure "$AB_BIN" is attached to IT -----
 # "$AB_BIN" SILENTLY launches its own bundled Chrome (~/."$AB_BIN"/browsers/chrome-*) when it
-# is not connected to a CDP endpoint. That browser has none of the candidate's logins, so a run that forgets
+# is not connected to a CDP endpoint. That browser has none of your logins, so a run that forgets
 # to attach sees "Sign In" everywhere and reports "the candidate is signed out" — burning the whole run on a
 # false diagnosis. Verify the attachment by CDP target-id overlap before believing any login state.
 cdp_up() { curl -s --max-time 4 "http://127.0.0.1:${PORT}/json/version" >/dev/null 2>&1; }
@@ -148,7 +152,10 @@ strong={
  "linkedin": ("linkedin.com", ("/feed","/mynetwork","/jobs")),
  "indeed":   ("indeed.com",   ("/notifications","/myjobs","/account","/settings")),
  "jaabz":    ("jaabz.com",    ("/dashboard","/my-jobs","/profile")),
- "jobs":     ("jobs.ch",     ("/en/applications","/en/account","/en/my-jobs","/en/profile","/en/dashboard")),
+  "jobs":     ("jobs.ch",     ("/en/applications","/en/account","/en/my-jobs","/en/profile","/en/dashboard")),
+  "thehub":   ("thehub.io",   ("/my-jobs","/client/applicant","/dashboard")),
+  "itjobs":   ("itjobs.pt",   ("/user/","/perfil","/curriculo")),
+  "relocate": ("relocate.me", ("/user/","/jobs-applied")),
 }.get(name)
 if not strong:
     raise SystemExit(0)
@@ -218,10 +225,19 @@ print(n[0] if n else "")
       if [[ "$out" == *"My applications"* || "$out" == *"Sign out"* || "$out" == *"Log out"* \
          || "$out" == *"My account"* || "$out" == *"My profile"* ]]; then verdict=in
       elif [[ "$u" == *"/login"* || "$out" == *"Register now"* ]]; then verdict=out; fi ;;
+    thehub)
+      if [[ "$out" == *"My dashboard"* || "$out" == *"My jobs"* ]]; then verdict=in
+      elif [[ "$u" == *"/login"* || "$u" == *"/signup"* ]]; then verdict=out; fi ;;
+    itjobs)
+      if [[ "$out" == *"Candidaturas"* || "$out" == *"PERFIL"* || "$u" == *"/user/"* ]]; then verdict=in
+      elif [[ "$u" == *"/entrar"* || "$u" == *"/login"* || "$out" == *"Iniciar sessão"* ]]; then verdict=out; fi ;;
+    relocate)
+      if [[ "$out" == *"Jobs applied"* || "$u" == *"/user/"* ]]; then verdict=in
+      elif [[ "$u" == *"/login"* || "$out" == *"Log in"* ]]; then verdict=out; fi ;;
   esac
 
   # A live authenticated TAB outranks a "signed out" probe: the probe can land on a different
-  # country host (Indeed serves www/malaysia/ca separately) than the one she is actually signed in on.
+  # country host (Indeed serves www/malaysia/ca separately) than the one you is actually signed in on.
   if [ "$verdict" = out ]; then
     local st; st="$(open_tab_for "$name")"
     [ -n "$st" ] && verdict=in

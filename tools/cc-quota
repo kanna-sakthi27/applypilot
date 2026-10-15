@@ -12,6 +12,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const API = 'https://api.commandcode.ai';
 const PLAN_MONTHLY = {
@@ -130,7 +131,10 @@ async function main() {
 
   if (gateMode) {
     try {
-      const logDir = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'logs');
+      // fileURLToPath (not URL.pathname): pathname percent-encodes, so a workspace path with a
+      // space (or other reserved char) would silently break this write. The repo is meant to be
+      // relocatable, so resolve the real filesystem path.
+      const logDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'logs');
       fs.mkdirSync(logDir, { recursive: true });
       fs.appendFileSync(path.join(logDir, 'cc-quota-gate.jsonl'),
         JSON.stringify({ at: data.asOf, job: process.env.CC_GATE_JOB || null, ...data }) + '\n');

@@ -24,7 +24,7 @@ For each approved job:
    `posting closed`.
 2. **Re-confirm the basics before submitting.** If the posting has changed since the scan, or the
    title/company/location no longer matches the approved record, or it now hits a hard wall
-   (citizenship-only, no-sponsorship, below-floor pay, a language she does not hold) →
+   (citizenship-only, no-sponsorship, below-floor pay, a language you does not hold) →
    decision `skipped` with the reason. Say what changed.
 3. Otherwise drive the application to submission, exactly as the channel body describes.
 4. Count it as **applied** only on the confirmation text.
@@ -69,5 +69,6 @@ with the rest of the list.
 
 ## Finishing
 
-When the approved list is exhausted, post the short end-of-run summary as usual, and state clearly:
+When the approved list is exhausted, write the short end-of-run summary to the run log (do NOT post a
+Telegram summary — the launcher sends it), and state clearly:
 how many of the approved jobs were applied to, how many were skipped and why.

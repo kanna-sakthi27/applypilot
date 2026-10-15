@@ -5,8 +5,8 @@ channel** in the candidate's job-application system. Built 2026-09-20 from live 
 
 ## What Workopolis is (verified live 2026-09-20)
 
-A Canada-only job board whose applications run on **Indeed's** infrastructure. the candidate is logged in
-(header avatar "AS"), and she keeps Workopolis, Indeed, LinkedIn, Job Bank and Eluta tabs open in
+A Canada-only job board whose applications run on **Indeed's** infrastructure. you are logged in
+(header avatar "AS"), and you keeps Workopolis, Indeed, LinkedIn, Job Bank and Eluta tabs open in
 Brave.
 
 **The apply chain, verified end to end:**
@@ -34,7 +34,7 @@ Its own Canada-centric index, with a high share of postings that are **not submi
 - cards **without** "Quick apply" are external company-site applies → skip;
 - many postings are **hourly / day-rate** ("$75–$85 an hour") → skipped by rule;
 - many posted bands are **below the CAD floor** (C$116k/yr, ≈ CAD 9,700/mo) → skip;
-- Quebec postings are often **French-only** → skip (English + Tamil only).
+- Quebec postings are often **French-only** → skip (only the languages in `bank/core.md`).
 
 A high skip rate here is normal and by design; the pre-filter is what keeps the runs cheap.
 

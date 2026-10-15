@@ -1,6 +1,14 @@
+> Deep-dive notes for this channel: site mechanics and hard-won history. The runbook that
+> actually executes is `prompts/<channel>.md` + `prompts/_shared.md`, and **every form answer
+> comes from `bank/core.md`** — where this file and the bank disagree, the bank wins.
+>
+> Some notes here come from earlier incarnations of this system: anything mentioning
+> `browser action=…` or selecting a browser *profile* refers to a driver API that no longer
+> exists. The runbook drives the browser with the `agent-browser` CLI.
+
 ## candidate OVERRIDES 2026-09-07 (apply to every run)
 1. HIT 30/DAY PER CHANNEL: daily target is 30 submitted applications per channel. Do NOT stop early while in-scope supply remains. Per-run attempt cap 15 (LinkedIn: 30). Keep rotating keywords/markets (US/UK/IE/EU-English/CA/SG/AU/remote) until 30/day is reached or the fresh pool is genuinely exhausted; then log a RUN SUMMARY with counts.
-2. UNANSWERED QUESTION -> ASK, DON'T SKIP: if a required screening question has no answer in the bank, do NOT abandon/skip it silently. Send the candidate a Telegram message via conversations_send to <TELEGRAM_CONV_ID> (user <TELEGRAM_CHAT_ID>): job title @ company, the EXACT question text and options, note the application is paused on her answer, log it in the run-log section 5, then CONTINUE with other jobs. If she answers before the run ends, come back and complete it.
+2. UNANSWERED QUESTION -> ASK, DON'T SKIP: if a required screening question has no answer in the bank, do NOT abandon/skip it silently. Send the operator a Telegram message via `tools/tg-notify.sh`: job title @ company, the EXACT question text and options, note the application is paused on the candidate's answer, log it in the run-log section 5, then CONTINUE with other jobs. If the candidate answers before the run ends, come back and complete it.
 
 # Jaabz Auto-Apply Automation — Ruleset (v1, 2026-09-07)
 
@@ -49,7 +57,7 @@ Companion systems: LinkedIn (`linkedin-automation/`), Indeed (`indeed-automation
 Mine **Jaabz** (visa-sponsorship/relocation/remote DevOps+cloud board) for fresh in-scope roles, route
 each to its real application surface (LinkedIn Easy Apply → employer ATS), submit truthfully from the
 canonical answer bank, and keep the shared registry + Jaabz "Mark Applied" state in sync.
-**Daily budget: 30 applications max/day on Jaabz** (the candidate 2026-09-07; each channel has its own 30/day
+**Daily budget: 30 applications max/day on Jaabz** (candidate policy 2026-09-07; each channel has its own 30/day
 budget — see guardrail 4). Per-run soft target **8–10**. Report after each run (Telegram).
 
 ## 2. Hard guardrails (never cross)
@@ -57,9 +65,9 @@ budget — see guardrail 4). Per-run soft target **8–10**. Report after each r
 1. **Never invent facts.** Answers only from `bank/core.md` (canonical) + this
    folder's `bank/core.md` + workspace `bank/core.md`. Unknown required question (salary, visa, notice,
    start-date, clearance) → skip + log §5.
-2. **No money/visa guesswork.** Salary expected **USD 8,000/mo**; apply-floor **USD 7,000/mo**
-   (the candidate 2026-09-07). Per-country conversions/floor equivalents in canonical bank §2–§3. Nationality:
-   **<NATIONALITY> + <OTHER_NATIONALITY> dual national** (NOT <COUNTRY_OF_RESIDENCE>); needs sponsorship outside SL/IN. Answer
+2. **No money/visa guesswork.** Salary expected **USD <EXPECTED_MONTHLY_USD>/mo**; apply-floor **USD <FLOOR_MONTHLY_USD>/mo**
+   (candidate policy 2026-09-07). Per-country conversions/floor equivalents in canonical bank §2–§3. Nationality:
+   **<NATIONALITY> + <OTHER_NATIONALITY> dual national** (NOT <COUNTRY_OF_RESIDENCE>); needs sponsorship outside the authorised countries. Answer
    visa/sponsorship truthfully (Yes/needs-sponsorship) and **SUBMIT anyway** — only skip when the
    posting explicitly requires existing right-to-work/citizenship ("citizens/PR only", "must already
    hold work auth", "no sponsorship offered", "EU passport required", "SC clearance/5-yr UK residency").
@@ -68,15 +76,15 @@ budget — see guardrail 4). Per-run soft target **8–10**. Report after each r
    (ArgoCD/GitOps = never tick Yes; Python/Go = No — willing-to-learn only as free text; see canonical
    §2 experience mapping). Jaabz "AI SUMMARY" tags on premium jobs are a quick filter aid but ALWAYS
    read the real description fields before deciding.
-4. **Daily cap 30 on Jaabz** (own budget — the candidate 2026-09-07). Before EACH submission, count applied
+4. **Daily cap 30 on Jaabz** (own budget — candidate policy 2026-09-07). Before EACH submission, count applied
    rows dated today (Asia/Kuala_Lumpur) in `jaabz-automation/run-log.md` §6; STOP once 30. Per run ≤10.
-4a. **Cross-apply guard (the candidate 2026-09-07): BEFORE applying to any job, check the COMMON registry
+4a. **Cross-apply guard (candidate policy 2026-09-07): BEFORE applying to any job, check the COMMON registry
     `<WORKSPACE>/applied-jobs-registry.md`** — same company + same/similar title already
     applied on ANY channel (linkedin/indeed/glassdoor/foreign/jaabz) → SKIP + log §6. **Also check the
     Jaabz page's own state**: if the job shows "Applied" (Mark Applied active) → skip (dup from an
     earlier run). After EVERY successful submit: append a registry row (channel=jaabz) + click
     **Mark Applied** on the Jaabz job page (see §4 step 7).
-4b. **Hard blockers → SKIP and CONTINUE** (the candidate 2026-09-07): unanswerable required question, ATS/form
+4b. **Hard blockers → SKIP and CONTINUE** (candidate policy 2026-09-07): unanswerable required question, ATS/form
     bug, captcha wall on a JOB → skip that job, log §6, keep going. Never stop a run on one blocker.
     Only stop at run cap (10), day cap (30), or exhausted fresh list.
 5. **Never submit with an unanswered required question** → skip + log.
@@ -115,7 +123,7 @@ hubs + the on-page search form:
   snapshot), set the category combobox to **Devops**, optionally tick Visa/Remote, click **Search
   jobs**. Do NOT try to force filters via URL query params — they silently fall back to "All Jobs".
 - Pagination: `?page=2` style links at the bottom ("2 3 4 … Next »"). Stay on pages 1–2 per hub.
-- MARKET ROTATION (mirrors Indeed/foreign, English-only — the candidate 2026-09-07): the visa hubs are
+- MARKET ROTATION (mirrors Indeed/foreign, English-only — candidate policy 2026-09-07): the visa hubs are
   worldwide; prefer remote + the rotation's current country. Cycle countries: CA → SG → UK → IE → DE/NL
   → AU → UAE → remote-global. Skip roles needing Finnish/German/Dutch/French/etc.
 - Read the results list via a compact DOM evaluate: each job card links to `/jobs/<id>-<slug>`; map to

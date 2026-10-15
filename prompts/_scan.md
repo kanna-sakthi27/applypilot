@@ -60,19 +60,19 @@ Record shape (required fields marked ·):
 
 Score **fit**, using only `bank/core.md` (scope §8, skills §5, compensation §3):
 
-- 80-100: core is exactly her remit (DevOps / SRE / Platform / Cloud / Infra / Linux), senior or
+- 80-100: core is exactly your remit (DevOps / SRE / Platform / Cloud / Infra / Linux), senior or
   lead level, no wall, pay at or above the floor.
-- 50-79: in scope but weaker — one skill line she does not hold appears as a plus, or the level is
+- 50-79: in scope but weaker — one skill line you does not hold appears as a plus, or the level is
   borderline, or pay is near the floor.
-- 0-49: out of scope, or the core requirement is something she genuinely does not have
+- 0-49: out of scope, or the core requirement is something you genuinely does not have
   (Python/Go/Java development, ArgoCD/GitOps as the main remit, expert Helm/OpenShift,
   the language, the clearance, the citizenship wall).
 
-**Never infer experience that is not in `bank/core.md`.** If a posting wants a tool she does not
-have, say so in `scoreReasons` and lower the score — never write that she has it.
+**Never infer experience that is not in `bank/core.md`.** If a posting wants a tool you does not
+have, say so in `scoreReasons` and lower the score — never write that you has it.
 
 Do **not** drop a job because of a missing skill unless that skill *is* the job; per `core.md` a tool
-line she lacks is not automatically a wall. Record it and let the score reflect it.
+line you lacks is not automatically a wall. Record it and let the score reflect it.
 
 You do **not** need to decide scope=out jobs: don't record them at all. Record only what you judge
 in scope, plus borderline cases, and let the deterministic pass and the user's threshold decide.
@@ -80,6 +80,6 @@ in scope, plus borderline cases, and let the deterministic pass and the user's t
 ## Finishing
 
 Stop when you have recorded the run target worth of candidates, the day's supply is genuinely dry,
-or the turn budget is nearly spent. Then post the short end-of-run summary as usual
-(found / recorded / why anything was excluded). **No applications were submitted in this mode — say
-so explicitly in the summary.**
+or the turn budget is nearly spent. Then write the short end-of-run summary to the run log
+(found / recorded / why anything was excluded) — do NOT post a Telegram summary, the launcher sends it.
+**No applications were submitted in this mode — say so explicitly in the summary.**

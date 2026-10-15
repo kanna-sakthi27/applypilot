@@ -27,6 +27,60 @@ if [ "$MODE" = "--list" ] || [ "$MODE" = "list" ]; then
   exit $?
 fi
 
+STATE="$ROOT/state/models.state"
+if [ "$MODE" = "--pick" ]; then
+  # Build THIS run's model order from what the provider offers right now:
+  #   <working free model>,<other free models>,<cheap paid>,<final fallback>
+  # The catalogue tells us which slugs are FREE; a 1-turn probe confirms a free one actually replies
+  # (the catalogue is stale — retired free slugs linger). Anything cooled in state/models.state is
+  # dropped. Prints a comma-separated list; empty output means "use APPLY_MODELS".
+  CAT="$(timeout "${APPLY_CATALOG_TIMEOUT:-40}" "$CMD_BIN" --list-models 2>/dev/null || true)"
+  FREE="$(printf '%s\n' "$CAT" | grep -iE '(^|[^A-Za-z])free([^A-Za-z]|$)' | awk '{print $1}' \
+          | grep -E '(:free|-free)$' | sort -u | paste -sd, -)"
+  NOW="$(date +%s)"
+  COOL="$( [ -f "$STATE" ] && awk -F'\t' -v now="$NOW" '$2>now{print $1}' "$STATE" | paste -sd, - )"
+
+  keep=""; IFS=',' read -ra CAND <<< "$FREE"
+  for m in "${CAND[@]}"; do
+    m="$(printf '%s' "$m" | xargs)"; [ -n "$m" ] || continue
+    case ",$COOL," in *",$m,"*) continue ;; esac
+    keep="${keep:+$keep,}$m"
+  done
+
+  # Probe free candidates until one replies; that one becomes the primary. Bounded by APPLY_PICK_PROBE_MAX.
+  primary=""
+  if [ "${APPLY_PICK_PROBE:-1}" != "0" ] && [ -n "$keep" ]; then
+    TMPD="$(mktemp -d)"; n=0
+    IFS=',' read -ra LIVE <<< "$keep"
+    for m in "${LIVE[@]}"; do
+      [ "$n" -lt "${APPLY_PICK_PROBE_MAX:-4}" ] || break
+      n=$((n+1))
+      out="$(cd "$TMPD" && timeout 90 "$CMD_BIN" -p "Reply with exactly: OK" --model "$m" \
+              --yolo --skip-onboarding --no-auto-update --max-turns 1 --no-session 2>&1)"
+      case "$out" in
+        *"unavailable for free"*|*"tier has been retired"*|*"model is unavailable"*|*"model not found"*|*"Unknown model"*|*"Rate limit"*|*"rate-limited"*) continue ;;
+        *) printf '%s' "$out" | grep -qiE '(^|[^A-Za-z])ok([^A-Za-z]|$)' && { primary="$m"; break; } ;;
+      esac
+    done
+    rm -rf "$TMPD"
+  fi
+
+  ORDER=""
+  [ -n "$primary" ] && ORDER="$primary"
+  if [ -n "$keep" ]; then
+    IFS=',' read -ra LIVE <<< "$keep"
+    for m in "${LIVE[@]}"; do
+      [ -n "$m" ] || continue
+      [ "$m" = "$primary" ] && continue
+      ORDER="${ORDER:+$ORDER,}$m"
+    done
+  fi
+  ORDER="${ORDER:+$ORDER,}${APPLY_CHEAP_PAID:-z-ai/glm-5.3-flash}"
+  ORDER="$ORDER,${APPLY_FINAL_MODEL:-deepseek/deepseek-v4-flash}"
+  printf '%s\n' "$ORDER"
+  exit 0
+fi
+
 MODELS_RAW="${APPLY_MODELS:-}"
 if [ -z "$MODELS_RAW" ] && [ -f "$ROOT/.env" ]; then
   MODELS_RAW="$(sed -n 's/^APPLY_MODELS=//p' "$ROOT/.env" | tail -1)"

@@ -25,7 +25,7 @@ same answers bank, same policies — but for the Indeed "Apply with Indeed" (sma
 - Steps: resume-selection (38%) → questions/1 contact phone (50%) → questions/N screener + attestation
   → review-module (100%) → submit.
 - Resume already uploaded ("ALEX EXAMPLE - CV.pdf") and pre-selectable; phone number
-  prefilled as `<PHONE_E164>` — must set country combobox to Malaysia (+60) and strip the 60 → `<PHONE_NATIONAL>`.
+  prefilled as `<PHONE_E164>` — must set country combobox to <YOUR COUNTRY> (+<COUNTRY CODE>) and strip the 60 → `<PHONE_NATIONAL>`.
 - The screener pages contain fieldset questions (radios), text inputs, checkbox groups, and a currency
   combobox; match by normalized question text.
 - Attestation step: e-sign checkbox + full-name text + AI-consent radio.
